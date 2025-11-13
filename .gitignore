@@ -1,6 +1,7 @@
 adlr/
-data/
-model/
+Data/
+models/
+wandb/
 
 #git python template
 # Byte-compiled / optimized / DLL files
