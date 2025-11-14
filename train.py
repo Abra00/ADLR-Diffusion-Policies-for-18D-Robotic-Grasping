@@ -19,11 +19,11 @@ except ImportError:
 # HYPERPARAMETERS
 # -------------------------------
 config = {
-    "data_dir": "Data/studentGrasping/student_grasps_v1_processed",
+    "data_dir": "Data/studentGrasping/processed_meshes",
     "test_split": 0.25,
     "random_seed": 42,
     "latent_dim": 19,
-    "epochs": 250,
+    "epochs": 200,
     "batch_size": 16,  # !!! CRITICAL !!! Adjust based on GPU VRAM
     "learning_rate": 1.5e-3,
     "model_save_path": "models/autoencoder.pth",

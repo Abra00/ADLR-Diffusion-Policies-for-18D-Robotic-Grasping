@@ -3,29 +3,20 @@ import torch.nn as nn
 
 class Encoder3D(nn.Module):
     """
-    Encodes a 3D SDF grid (128x128x128) into a 19-dimensional latent vector.
+    Encodes a 3D SDF grid (32x32x32) into a 19-dimensional latent vector.
     
-    This architecture is a standard 5-layer 3D convolutional stack.
-    Each layer halves the spatial dimensions (e.g., 128 -> 64 -> 32 ...)
-    and doubles the feature channels (e.g., 16 -> 32 -> 64 ...).
+    This architecture is a 3-layer 3D convolutional stack.
+    Each layer halves the spatial dimensions (e.g., 32 -> 16 -> 8 -> 4)
+    and doubles the feature channels.
     """
     def __init__(self, latent_dim=19):
         super(Encoder3D, self).__init__()
         
-        # Input: (batch_size, 1, 128, 128, 128)
+        # Input: (batch_size, 1, 32, 32, 32)
         self.conv_stack = nn.Sequential(
-            # -> (batch_size, 16, 64, 64, 64)
-            nn.Conv3d(in_channels=1, out_channels=16, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU(0.2, inplace=True),
-            
-            # -> (batch_size, 32, 32, 32, 32)
-            nn.Conv3d(16, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm3d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-            
             # -> (batch_size, 64, 16, 16, 16)
-            nn.Conv3d(32, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm3d(64),
+            nn.Conv3d(in_channels=1, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm3d(64), # <-- ADDED
             nn.LeakyReLU(0.2, inplace=True),
             
             # -> (batch_size, 128, 8, 8, 8)
@@ -47,7 +38,7 @@ class Encoder3D(nn.Module):
         self.fc = nn.Linear(256 * 4 * 4 * 4, latent_dim)
 
     def forward(self, x):
-        # x shape: (batch_size, 1, 128, 128, 128)
+        # x shape: (batch_size, 1, 32, 32, 32)
         x = self.conv_stack(x)
         x = self.flatten(x)
         latent_vector = self.fc(x)
@@ -55,17 +46,14 @@ class Encoder3D(nn.Module):
 
 class Decoder3D(nn.Module):
     """
-    Decodes a 19-dimensional latent vector back into a 3D SDF grid.
-    This is the exact reverse of the Encoder, using ConvTranspose3d
-    to upsample the spatial dimensions.
+    Decodes a 19-dimensional latent vector back into a 3D SDF grid (32x32x32).
+    This is the exact reverse of the new 3-layer Encoder.
     """
     def __init__(self, latent_dim=19):
         super(Decoder3D, self).__init__()
         
         # This will project the 19D vector back to the flattened 3D size
         self.fc = nn.Linear(latent_dim, 256 * 4 * 4 * 4)
-        
-        # Un-flattening layer (we'll do this in forward)
         
         # Transposed convolution stack
         self.deconv_stack = nn.Sequential(
@@ -80,18 +68,8 @@ class Decoder3D(nn.Module):
             nn.BatchNorm3d(64),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # -> (batch_size, 32, 32, 32, 32)
-            nn.ConvTranspose3d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm3d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # -> (batch_size, 16, 64, 64, 64)
-            nn.ConvTranspose3d(32, 16, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm3d(16),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            # -> (batch_size, 1, 128, 128, 128)
-            nn.ConvTranspose3d(16, 1, kernel_size=4, stride=2, padding=1),
+            # -> (batch_size, 1, 32, 32, 32)
+            nn.ConvTranspose3d(64, 1, kernel_size=4, stride=2, padding=1),
         )
 
     def forward(self, x):
@@ -104,7 +82,7 @@ class Decoder3D(nn.Module):
 
 class Autoencoder3D(nn.Module):
     """
-    Combines the Encoder and Decoder.
+    Combines the 32x32x32 Encoder and Decoder.
     """
     def __init__(self, latent_dim=19):
         super(Autoencoder3D, self).__init__()
@@ -112,16 +90,16 @@ class Autoencoder3D(nn.Module):
         self.decoder = Decoder3D(latent_dim)
         
     def forward(self, x):
-        # x shape: (batch_size, 1, 128, 128, 128)
+        # x shape: (batch_size, 1, 32, 32, 32)
         latent_vector = self.encoder(x)
         reconstructed_sdf = self.decoder(latent_vector)
         return reconstructed_sdf
 
 # --- Example of how to use it ---
 if __name__ == "__main__":
-    # Create a dummy 3D SDF grid (batch of 2)
+    # Create a dummy 3D SDF grid (batch of 2) at 32x32x32
     # (batch_size, channels, depth, height, width)
-    dummy_sdf = torch.randn(2, 1, 128, 128, 128)
+    dummy_sdf = torch.randn(2, 1, 32, 32, 32)
     
     # Initialize the autoencoder
     model = Autoencoder3D(latent_dim=19)
@@ -134,6 +112,6 @@ if __name__ == "__main__":
     
     # You can also test the encoder by itself
     encoder = model.encoder
-    latent_vec = encoder(dummy_sdf) # Fixed: dummy_mdf -> dummy_sdf
+    latent_vec = encoder(dummy_sdf)
     print(f"Latent vector shape: {latent_vec.shape}") # Should be (2, 19)
     print(latent_vec)

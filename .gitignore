@@ -1,5 +1,7 @@
 adlr/
-Data/
+student_grasps_v1/
+processed_meshes/
+urdfs/
 models/
 wandb/
 
