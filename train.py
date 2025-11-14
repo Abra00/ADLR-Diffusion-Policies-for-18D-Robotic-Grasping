@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
-import wandb  # <-- For online logging
+import wandb
 
-# --- Import models from your src folder ---
+
 try:
     from src.autoencoder_model import Autoencoder3D
 except ImportError:
@@ -24,8 +24,9 @@ config = {
     "random_seed": 42,
     "latent_dim": 19,
     "epochs": 200,
-    "batch_size": 16,  # !!! CRITICAL !!! Adjust based on GPU VRAM
+    "batch_size": 32,  # !!! CRITICAL !!! Adjust based on GPU VRAM
     "learning_rate": 1.5e-3,
+    "lr_scheduler_min": 1e-6,  # +++ ADDED +++ Minimum LR for scheduler
     "model_save_path": "models/autoencoder.pth",
     "encoder_save_path": "models/encoder_only.pth"
 }
@@ -35,8 +36,8 @@ config = {
 # -------------------------------
 wandb.init(
     project="diffusion-grasping", # Same project as process_meshes
-    job_type="training",            # This is a training run
-    config=config                   # Save all hyperparameters
+    job_type="training",          # This is a training run
+    config=config                 # Save all hyperparameters
 )
 # Use the config values from wandb from now on
 cfg = wandb.config
@@ -127,6 +128,13 @@ def train():
     loss_function = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
 
+    # +++ ADDED +++ Initialize the scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=cfg.epochs,      # The number of epochs to complete one cosine cycle
+        eta_min=cfg.lr_scheduler_min  # The minimum learning rate
+    )
+
     # --- WANDB: Watch the model ---
     # This logs gradients and model topology
     wandb.watch(model, log="all", log_freq=100) # Log every 100 batches
@@ -170,9 +178,11 @@ def train():
         wandb.log({
             "epoch": epoch + 1,
             "train_loss": avg_train_loss,
-            "val_loss": avg_val_loss
+            "val_loss": avg_val_loss,
+            "learning_rate": optimizer.param_groups[0]['lr']  # +++ ADDED +++
         })
 
+        scheduler.step()
 
         #Conditionally save the BEST model
         if val_loader and avg_val_loss < best_val_loss and avg_val_loss > 0:
@@ -193,7 +203,6 @@ def train():
 
     print("--- Training Complete ---")
     
-    # --- WANDB: Finish logging ---
     wandb.finish()
 
 
