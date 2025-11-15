@@ -89,7 +89,7 @@ if __name__ == "__main__":
     DATASET_CONFIG = {
         "input_dir": "student_grasps_v1",
         "output_folder": "processed_meshes",
-        "limit": 2,               # Set to a number (e.g., 10) to test
+        "limit": None,               # Set to a number (e.g., 10) to test
         "overwrite": True,          # Set True to re-process existing files
         "save_fixed_mesh": False,    # Set True to save the .fixed.obj files
         
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         "level_factor": 2,           # Numerator for 'level' (level = 2 / 128)
 
         # Multiprocessing
-        "num_workers": 5            # Number of parallel processes
+        "num_workers": 10            # Number of parallel processes
     }
     
     # --- Step 1: Create Output Directory ---
