@@ -7,22 +7,28 @@ import mesh2sdf
 # -------------------------------
 # Settings
 # -------------------------------
-mesh_folder = "student_grasps_v1"   # Root folder containing the dataset
-output_folder = "student_grasps_v1_processed"         # Folder to save SDFs and fixed meshes
+mesh_folder = "Data/studentGrasping/student_grasps_v1"
+output_folder = "Data/studentGrasping/student_grasps_v1_processed"
 os.makedirs(output_folder, exist_ok=True)
 
-mesh_scale = 1       # Target range [-1, 1]
-size = 128           # SDF grid resolution
-level = 2 / size     # Step size for mesh2sdf
-max_objects = 2      # For testing: limit number of instances to process (None for all)
+# --- This is a dictionary, so we will access it with config['key'] ---
+config = {
+    "mesh_scale": 1.0,   # Target range [-1, 1]
+    "sdf_size": 128,     # SDF grid resolution
+    "max_objects": 3,    # For testing: limit number of instances
+    "mesh_folder": mesh_folder,
+    "output_folder": output_folder,
+}
+config["level"] = 2.0 / config["sdf_size"]  # Step size
 
 # -------------------------------
-# 1. Collect all meshes recursively in sorted order
+# 2. Collect all meshes recursively in sorted order
 # -------------------------------
 mesh_paths = []
-
-for category in sorted(os.listdir(mesh_folder)):
-    category_path = os.path.join(mesh_folder, category)
+print("Collecting mesh paths...")
+# --- FIX: Use dictionary access config['mesh_folder'] ---
+for category in sorted(os.listdir(config['mesh_folder'])):
+    category_path = os.path.join(config['mesh_folder'], category)
     if not os.path.isdir(category_path):
         continue
     for instance in sorted(os.listdir(category_path)):
@@ -37,54 +43,93 @@ for category in sorted(os.listdir(mesh_folder)):
                 if fname.endswith(".obj") or fname.endswith(".off"):
                     mesh_paths.append(os.path.join(trial_path, fname))
 
-# Limit number of instances for testing
-if max_objects is not None:
-    mesh_paths = mesh_paths[:max_objects]
+if config['max_objects'] is not None:
+    print(f"Limiting to {config['max_objects']} meshes for testing.")
+    mesh_paths = mesh_paths[:config['max_objects']]
+
+print(f"Found {len(mesh_paths)} meshes to process.")
 
 # -------------------------------
-# 2. Determine largest bounding box to compute uniform scaling
+# 3. Load all meshes, find max bounding box
 # -------------------------------
+print("Loading all meshes to find max bounding box...")
+mesh_data = []
 max_size = 0.0
-for filepath in mesh_paths:
-    mesh = trimesh.load(filepath)
-    vertices = mesh.vertices
-    bbox_size = (vertices.max(0) - vertices.min(0)).max()
-    if bbox_size > max_size:
-        max_size = bbox_size
+total_load_time = 0.0
 
-scale_factor = 2.0 * mesh_scale / max_size
-print(f"Maximum bounding box: {max_size:.4f}")
-print(f"Uniform scale factor: {scale_factor:.4f}")
+for filepath in mesh_paths:
+    t_start = time.time()
+    try:
+        mesh = trimesh.load(filepath, force='mesh')
+        if not isinstance(mesh, trimesh.Trimesh) or len(mesh.vertices) == 0:
+            print(f"Skipping {filepath}: Not a valid mesh.")
+            continue
+            
+        vertices = mesh.vertices
+        bbox_min = vertices.min(0)
+        bbox_max = vertices.max(0)
+        center = (bbox_max + bbox_min) / 2.0
+        
+        bbox_size = (bbox_max - bbox_min).max()
+        if bbox_size > max_size:
+            max_size = bbox_size
+        
+        mesh_data.append({'mesh': mesh, 'center': center, 'path': filepath})
+        total_load_time += (time.time() - t_start)
+        
+    except Exception as e:
+        print(f"Skipping {filepath}: Failed to load. Error: {e}")
+
+print(f"Loaded {len(mesh_data)} valid meshes in {total_load_time:.2f}s.")
 
 # -------------------------------
-# 3. Process meshes: center, scale, compute SDF, save
+# 4. Process meshes: center, scale, compute SDF, save
 # -------------------------------
-for filepath in mesh_paths:
-    fname = os.path.basename(filepath)
-    rel_path = os.path.relpath(os.path.dirname(filepath), mesh_folder)
-    out_dir = os.path.join(output_folder, rel_path)
-    os.makedirs(out_dir, exist_ok=True)
+if not mesh_data or max_size == 0.0:
+    print("No valid meshes were loaded. Exiting.")
+else:
+    # --- FIX: Use dictionary access ---
+    scale_factor = 2.0 * config['mesh_scale'] / max_size
+    print(f"\nMaximum bounding box: {max_size:.4f}")
+    print(f"Uniform scale factor: {scale_factor:.4f}")
+    print(f"\nProcessing {len(mesh_data)} meshes...")
 
-    mesh = trimesh.load(filepath)
-    vertices = mesh.vertices
+    total_process_time = 0.0
+    for data in mesh_data:
+        t_start_proc = time.time()
+        
+        mesh = data['mesh']
+        center = data['center']
+        filepath = data['path']
+        
+        fname = os.path.basename(filepath)
+        # --- FIX: Use dictionary access ---
+        rel_path = os.path.relpath(os.path.dirname(filepath), config['mesh_folder'])
+        out_dir = os.path.join(config['output_folder'], rel_path)
+        os.makedirs(out_dir, exist_ok=True)
 
-    # Center and scale mesh
-    center = vertices.mean(0)
-    vertices = (vertices - center) * scale_factor
+        vertices_scaled = (mesh.vertices - center) * scale_factor
 
-    t0 = time.time()
-    sdf, mesh_fixed = mesh2sdf.compute(
-        vertices, mesh.faces, size=size, fix=True, level=level, return_mesh=True
-    )
-    t1 = time.time()
+        try:
+            # --- FIX: Use dictionary access ---
+            sdf, mesh_fixed = mesh2sdf.compute(
+                vertices_scaled, mesh.faces, size=config['sdf_size'], fix=True, level=config['level'], return_mesh=True
+            )
+            
+            mesh_fixed.vertices = (mesh_fixed.vertices / scale_factor) + center
 
-    # Optional: transform mesh back to original position
-    mesh_fixed.vertices = mesh_fixed.vertices / scale_factor + center
+            output_name = os.path.splitext(fname)[0]
+            np.save(os.path.join(out_dir, f"{output_name}.npy"), sdf)
+            mesh_fixed.export(os.path.join(out_dir, f"{output_name}.fixed.obj"))
+            
+            t_end_proc = time.time()
+            process_time = t_end_proc - t_start_proc
+            total_process_time += process_time
+            
+            if (mesh_data.index(data) + 1) % 50 == 0: # Print update every 50
+                print(f"Processed {mesh_data.index(data) + 1}/{len(mesh_data)} meshes...")
+            
+        except Exception as e:
+            print(f"Failed to compute SDF for {fname}. Error: {e}")
 
-    # Save SDF and fixed mesh
-    np.save(os.path.join(out_dir, fname.replace(".obj",".npy").replace(".off",".npy")), sdf)
-    mesh_fixed.export(os.path.join(out_dir, fname.replace(".obj",".fixed.obj").replace(".off",".fixed.obj")))
-
-    print(f"Processed {fname} in {t1-t0:.2f}s")
-
-print("All selected meshes have been scaled and SDFs computed.")
+    print("\nAll selected meshes have been scaled and SDFs computed.")

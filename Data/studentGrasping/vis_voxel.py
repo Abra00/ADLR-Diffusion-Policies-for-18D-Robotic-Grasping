@@ -5,7 +5,7 @@ import trimesh
 # -------------------------------
 # Settings
 # -------------------------------
-file_path = "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed/04468005/25c3710ca5f245b8c62b7ed19a553484/0/mesh.npy"  # Pfad zur SDF-Datei
+file_path = "/home/abra/Workspace/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/models/test_outputs/reconstructed_1.npy"
 slice_axis = 2  # axes for 2D Slice (0=x, 1=y, 2=z)
 threshold = 0.0  # everything  <= threshold is counted as inside the mesh 
 

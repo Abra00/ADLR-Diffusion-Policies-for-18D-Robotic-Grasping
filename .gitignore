@@ -1,6 +1,9 @@
 adlr/
-data/
-model/
+student_grasps_v1/
+processed_meshes/
+urdfs/
+models/
+wandb/
 
 #git python template
 # Byte-compiled / optimized / DLL files
