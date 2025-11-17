@@ -9,11 +9,6 @@ from functools import partial
 import time
 import mesh2sdf
 
-# ---
-# This script is now based on the official mesh2sdf pipeline logic
-# provided by the user. It replaces all previous attempts.
-# ---
-
 
 def process_file(config, mesh_path_tuple):
     """
@@ -28,15 +23,14 @@ def process_file(config, mesh_path_tuple):
     OUTPUT_FIXED_MESH = output_base + ".fixed.obj"
     
     try:
-        # --- Config from user's script ---
+        # Config from user's script
         mesh_scale = config["mesh_scale"]
         size = config["resolution"]
         level = config["level_factor"] / size # e.g., 2 / 128
         
-        # --- 1. Load mesh ---
         mesh = trimesh.load(input_file, force='mesh')
 
-        # --- 2. Normalize mesh (using user's exact logic) ---
+        # Normalize mesh
         vertices = mesh.vertices
         bbmin = vertices.min(0)
         bbmax = vertices.max(0)
@@ -57,11 +51,10 @@ def process_file(config, mesh_path_tuple):
             return_mesh=True
         )
 
-        # --- 4. Save .npy file ---
-        # We save the raw SDF, as per the user's script
+        # We save the raw SDF
         np.save(OUTPUT_NPY_FILE, sdf.astype(np.float32))
 
-        # --- 5. Save fixed mesh (optional) ---
+        # Save fixed mesh (optional) ---
         if config["save_fixed_mesh"]:
             # Un-normalize the vertices of the *fixed* mesh to
             # save it in its original position and scale.
@@ -75,11 +68,6 @@ def process_file(config, mesh_path_tuple):
         error_msg = traceback.format_exc()
         return False, input_file, error_msg
 
-
-# ---
-# NEW Main Execution Block
-# (Re-enabled multiprocessing)
-# ---
 
 if __name__ == "__main__":
     
@@ -96,17 +84,17 @@ if __name__ == "__main__":
         # Parameters from the mesh2sdf script
         "resolution": 32,           # Voxel grid resolution (was 'size')
         "mesh_scale": 0.8,           # Scale for normalization
-        "level_factor": 2,           # Numerator for 'level' (level = 2 / 128)
+        "level_factor": 5,           # Numerator for 'level' (level = 2 / 128)
 
         # Multiprocessing
         "num_workers": 10            # Number of parallel processes
     }
     
-    # --- Step 1: Create Output Directory ---
+    # Create Output Directory ---
     output_dir = DATASET_CONFIG["output_folder"]
     os.makedirs(output_dir, exist_ok=True)
 
-    # --- Step 2: Find all 'mesh.obj' files ---
+    # Find all 'mesh.obj' files ---
     print("Finding mesh files...")
     search_path = os.path.join(DATASET_CONFIG["input_dir"], "*", "*", "*", "mesh.obj")
     all_mesh_files = glob.glob(search_path)
@@ -119,7 +107,7 @@ if __name__ == "__main__":
     
     print(f"Found {len(valid_mesh_files)} valid mesh files.")
 
-    # --- Step 3: Create Task List ---
+    # Step 3: Create Task List ---
     tasks = []
     for mesh_path in valid_mesh_files:
         try:
@@ -142,7 +130,7 @@ if __name__ == "__main__":
         # Add a tuple of (input_file, output_base) to the task list
         tasks.append((mesh_path, output_base))
             
-    # --- Step 4: Apply Limit ---
+    # Apply Limit ---
     if DATASET_CONFIG["limit"] is not None and DATASET_CONFIG["limit"] > 0:
         print(f"Limiting processing to {DATASET_CONFIG['limit']} files.")
         tasks = tasks[:DATASET_CONFIG["limit"]]
@@ -153,7 +141,7 @@ if __name__ == "__main__":
         print("No files to process. Exiting.")
         exit()
 
-    # --- Step 5: Process Files (in Parallel) ---
+    # Process Files (in Parallel) ---
     num_workers = DATASET_CONFIG["num_workers"]
     print(f"Starting processing pool with {num_workers} workers...")
     
@@ -175,7 +163,7 @@ if __name__ == "__main__":
             else:
                 failed_files.append((path, error))
 
-    # --- Step 6: Print Summary ---
+    # Print Summary
     print("\n---")
     print("Dataset Processing Complete!")
     print(f"  {success_count} files processed successfully.")

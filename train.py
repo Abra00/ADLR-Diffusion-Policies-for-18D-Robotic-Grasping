@@ -20,10 +20,10 @@ except ImportError:
 # -------------------------------
 config = {
     "data_dir": "Data/studentGrasping/processed_meshes",
-    "test_split": 0.25,
+    "test_split": 0.10,
     "random_seed": 42,
     "latent_dim": 19,
-    "epochs": 200,
+    "epochs": 100,
     "batch_size": 32,  # !!! CRITICAL !!! Adjust based on GPU VRAM
     "learning_rate": 1.5e-3,
     "lr_scheduler_min": 1e-6,  # +++ ADDED +++ Minimum LR for scheduler

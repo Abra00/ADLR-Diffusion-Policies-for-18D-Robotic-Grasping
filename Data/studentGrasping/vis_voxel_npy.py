@@ -8,7 +8,7 @@ import trimesh
 # CONFIGURATION
 # ---
 # This parameter MUST match the "mesh_scale" you used
-# in 'process_dataset_reliable.py'
+# in 'process_meshes_new.py'
 MESH_SCALE = 0.8
 # ---
 
@@ -37,9 +37,7 @@ def visualize_interactive(input_npy_file):
     # Print the SDF range
     print(f"SDF grid loaded. Shape: {sdf.shape}, Max: {sdf.max():.4f}, Min: {sdf.min():.4f}")
 
-    # ---
-    # 1. Extract 3D Level Sets (Marching Cubes)
-    # ---
+    # Extract 3D Level Sets (Marching Cubes)
     print(f"Extracting 3D surfaces at levels: {levels}...")
     
     main_surface_mesh = None
@@ -62,9 +60,8 @@ def visualize_interactive(input_npy_file):
             # This is the main surface, save it for showing
             main_surface_mesh = mesh
 
-    # ---
-    # 2. Show Interactive 3D View
-    # ---
+    # Show Interactive 3D View
+
     if main_surface_mesh:
         print("\n---")
         print("Showing interactive 3D view of the main surface (level 0.0)...")
