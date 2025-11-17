@@ -85,7 +85,7 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         # Provide a default path for testing if no argument is given
-        default_file = 'processed_meshes/03513137_1d1cc96025786db595f577622f465c85_1.npy'
+        default_file = 'processed_meshes/02876657_4b5f54fc4e629371cf078dc7b29022e6_0.npy'
         if os.path.exists(default_file):
              print(f"Warning: No file provided. Using default test file: {default_file}")
              filename = default_file

@@ -13,7 +13,11 @@ import mesh2sdf
 def process_file(config, mesh_path_tuple):
     """
     Runs the full processing pipeline for a single file,
-    using the user-provided mesh2sdf logic.
+    using the "Global Scale, Local Center" method.
+    
+    This keeps the relative sizing (from global_scale_factor)
+    but centers each object in the grid (from local_center)
+    for easier learning.
     """
     
     # Unpack tuple from multiprocessing
@@ -23,25 +27,26 @@ def process_file(config, mesh_path_tuple):
     OUTPUT_FIXED_MESH = output_base + ".fixed.obj"
     
     try:
-        # Config from user's script
-        mesh_scale = config["mesh_scale"]
+        # We get the GLOBAL scale factor from the main config
+        global_scale_factor = config["global_scale_factor"]
+        
         size = config["resolution"]
         level = config["level_factor"] / size # e.g., 2 / 128
         
         mesh = trimesh.load(input_file, force='mesh')
 
-        # Normalize mesh
         vertices = mesh.vertices
+        
+        # Calculate the local center for *this* mesh
         bbmin = vertices.min(0)
         bbmax = vertices.max(0)
-        center = (bbmin + bbmax) * 0.5
-        scale_factor = 2.0 * mesh_scale / (bbmax - bbmin).max()
-        norm_vertices = (vertices - center) * scale_factor
+        local_center = (bbmin + bbmax) * 0.5
+        
+        # Normalize using the local center but the global scale
+        norm_vertices = (vertices - local_center) * global_scale_factor
+        # ---
 
-        # --- 3. Compute SDF ---
-        # This is the core call.
-        # fix=True: Heals the mesh (like we tried to do manually)
-        # return_mesh=True: Returns the fixed mesh
+        # Compute SDF ---
         sdf, fixed_mesh_norm = mesh2sdf.compute(
             norm_vertices, 
             mesh.faces, 
@@ -56,9 +61,7 @@ def process_file(config, mesh_path_tuple):
 
         # Save fixed mesh (optional) ---
         if config["save_fixed_mesh"]:
-            # Un-normalize the vertices of the *fixed* mesh to
-            # save it in its original position and scale.
-            fixed_mesh_norm.vertices = fixed_mesh_norm.vertices / scale_factor + center
+            fixed_mesh_norm.vertices = fixed_mesh_norm.vertices / global_scale_factor + local_center
             fixed_mesh_norm.export(OUTPUT_FIXED_MESH)
 
         return True, input_file, None
@@ -71,23 +74,22 @@ def process_file(config, mesh_path_tuple):
 
 if __name__ == "__main__":
     
-    # ---
-    # MAIN DATASET CONFIGURATION
-    # ---
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
     DATASET_CONFIG = {
-        "input_dir": "student_grasps_v1",
-        "output_folder": "processed_meshes",
-        "limit": None,               # Set to a number (e.g., 10) to test
-        "overwrite": True,          # Set True to re-process existing files
-        "save_fixed_mesh": False,    # Set True to save the .fixed.obj files
+        "input_dir": os.path.join(script_dir, "student_grasps_v1"),
+        "output_folder": os.path.join(script_dir, "processed_meshes"),
+        "limit": None,            # Set to a number (e.g., 10) to test
+        "overwrite": True,        # Set True to re-process existing files
+        "save_fixed_mesh": False,   # Set True to save the .fixed.obj files
         
         # Parameters from the mesh2sdf script
-        "resolution": 32,           # Voxel grid resolution (was 'size')
-        "mesh_scale": 0.8,           # Scale for normalization
-        "level_factor": 5,           # Numerator for 'level' (level = 2 / 128)
+        "resolution": 64,         # Voxel grid resolution (was 'size')
+        "mesh_scale": 0.8,        # Scale for normalization
+        "level_factor": 5,        # Numerator for 'level' (level = 2 / 128)
 
         # Multiprocessing
-        "num_workers": 10            # Number of parallel processes
+        "num_workers": 10           # Number of parallel processes
     }
     
     # Create Output Directory ---
@@ -106,8 +108,52 @@ if __name__ == "__main__":
             valid_mesh_files.append(f)
     
     print(f"Found {len(valid_mesh_files)} valid mesh files.")
+    
+    if not valid_mesh_files:
+        print("No valid files found. Exiting.")
+        exit()
 
-    # Step 3: Create Task List ---
+    # Pre-calculation of Global Bounding Box
+    print("Calculating global bounding box for all meshes...")
+    global_bbmin = np.array([np.inf, np.inf, np.inf])
+    global_bbmax = np.array([-np.inf, -np.inf, -np.inf])
+
+    for mesh_path in tqdm(valid_mesh_files, desc="Finding Global Bounds"):
+        try:
+            mesh = trimesh.load(mesh_path, force='mesh')
+            if mesh.vertices.shape[0] == 0:
+                print(f"\nWarning: {mesh_path} has 0 vertices. Skipping.")
+                continue
+            global_bbmin = np.minimum(global_bbmin, mesh.vertices.min(0))
+            global_bbmax = np.maximum(global_bbmax, mesh.vertices.max(0))
+        except Exception as e:
+            print(f"\nWarning: Could not load {mesh_path} for bounds calculation. Skipping. Error: {e}")
+    
+    # Calculate global center and scale factor
+    global_center = (global_bbmin + global_bbmax) * 0.5
+    global_max_dim = (global_bbmax - global_bbmin).max()
+    
+    if global_max_dim == 0:
+        print("Warning: Global max dimension is 0. All meshes are points? Setting to 1.0 to avoid errors.")
+        global_max_dim = 1.0 
+        
+    global_scale_factor = 2.0 * DATASET_CONFIG["mesh_scale"] / global_max_dim
+
+    # PRINT FOR OUTLIER CHECK
+    print("\n" + "="*30)
+    print("GLOBAL BOUNDS CHECK (FOR OUTLIERS)")
+    print(f"  Global Bounding Box Min: {global_bbmin}")
+    print(f"  Global Bounding Box Max: {global_bbmax}")
+    print(f"  Global Max Dimension:    {global_max_dim}")
+    print(f"  Global Scale Factor:     {global_scale_factor}")
+    print("="*30 + "\n")
+    # ---
+
+    # Add global scale factor to the config to be passed to workers ---
+    DATASET_CONFIG["global_scale_factor"] = global_scale_factor
+
+
+    # Create Task List ---
     tasks = []
     for mesh_path in valid_mesh_files:
         try:
@@ -127,10 +173,9 @@ if __name__ == "__main__":
         if not DATASET_CONFIG["overwrite"] and os.path.exists(output_npy):
             continue
             
-        # Add a tuple of (input_file, output_base) to the task list
         tasks.append((mesh_path, output_base))
             
-    # Apply Limit ---
+    # Apply Limit
     if DATASET_CONFIG["limit"] is not None and DATASET_CONFIG["limit"] > 0:
         print(f"Limiting processing to {DATASET_CONFIG['limit']} files.")
         tasks = tasks[:DATASET_CONFIG["limit"]]
@@ -152,8 +197,6 @@ if __name__ == "__main__":
     failed_files = []
     
     with multiprocessing.Pool(num_workers) as pool:
-        # Wrap the imap results with tqdm for a progress bar
-        # pool.imap_unordered is fast as it doesn't wait for order
         results_iter = pool.imap_unordered(processor_func, tasks)
         
         for result in tqdm(results_iter, total=len(tasks), desc="Processing Meshes"):
