@@ -10,7 +10,12 @@ __pycache__/
 
 # C extensions
 *.so
-
+# Experiment outputs and large datasets
+exps/
+Data/studentGrasping/student_grasps_v1/
+Data/studentGrasping/urdfs/
+Data/studentGrasping/processed_scores/
+Data/studentGrasping/processed_meshes/
 # Distribution / packaging
 .Python
 build/
