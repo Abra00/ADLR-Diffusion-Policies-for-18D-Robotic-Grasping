@@ -1,6 +1,6 @@
 [submodule "lib/tiny_diffusion"]
 	path = lib/tiny_diffusion
-	url = https://github.com/tanelp/tiny_diffusion.git
+	url = https://github.com/tanelp/tiny-diffusion.git
 [submodule "lib/mesh2sdf"]
 	path = lib/mesh2sdf
 	url = https://github.com/wang-ps/mesh2sdf.git
