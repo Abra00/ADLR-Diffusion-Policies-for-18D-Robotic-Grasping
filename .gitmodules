@@ -4,3 +4,4 @@
 [submodule "lib/mesh2sdf"]
 	path = lib/mesh2sdf
 	url = https://github.com/wang-ps/mesh2sdf.git
+
