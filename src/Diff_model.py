@@ -9,7 +9,7 @@ from torch.nn import functional as F
 import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
-from lib.tiny_diffusion.positional_embeddings import PositionalEmbedding
+from src.positional_embeddings import PositionalEmbedding
 
 
 class Block(nn.Module):
