@@ -41,18 +41,18 @@ class VoxelEncoder(nn.Module):
             nn.BatchNorm3d(256),
             nn.LeakyReLU(0.2, inplace=True)
         )
-        
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
         # Flatten the (256, 4, 4, 4) tensor
         # 256 * 4 * 4 * 4 = 16384
         self.flatten = nn.Flatten()
         
         # Fully connected layer to get to the 19D latent vector
-        self.fc = nn.Linear(256 * 4 * 4 * 4, emb_size)
+        self.fc = nn.Linear(256, emb_size)
 
 
     def forward(self, x):
-        # x shape: (batch_size, 1, 32, 32, 32)
         x = self.conv_stack(x)
+        x = self.avg_pool(x)
         x = self.flatten(x)
         x = self.fc(x)
         return x
@@ -96,9 +96,11 @@ class NoiseScheduler():
                  num_timesteps=1000,
                  beta_start=0.0001,
                  beta_end=0.02,
-                 beta_schedule="linear"):
+                 beta_schedule="linear",
+                 device=None):
 
         self.num_timesteps = num_timesteps
+        self.device = device if device is not None else torch.device("cpu")
         if beta_schedule == "linear":
             self.betas = torch.linspace(
                 beta_start, beta_end, num_timesteps, dtype=torch.float32)

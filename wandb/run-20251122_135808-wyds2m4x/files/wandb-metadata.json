@@ -1,0 +1,37 @@
+{
+  "os": "macOS-26.1-arm64-arm-64bit",
+  "python": "CPython 3.10.19",
+  "startedAt": "2025-11-22T12:58:08.568627Z",
+  "program": "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Diff_train_test.py",
+  "codePath": "Diff_train_test.py",
+  "codePathLocal": "Diff_train_test.py",
+  "git": {
+    "remote": "git@github.com:Abra00/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping.git",
+    "commit": "e571a351fee630934bb95cd9b3d53b46cd68165a"
+  },
+  "email": "lfrontini@gmx.de",
+  "root": "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping",
+  "host": "MacBook-Pro-von-Luca.local",
+  "executable": "/Users/lucafrontini/anaconda3/envs/adlr-env-final/bin/python",
+  "cpu_count": 10,
+  "cpu_count_logical": 10,
+  "disk": {
+    "/": {
+      "total": "994662584320",
+      "used": "405939658752"
+    }
+  },
+  "memory": {
+    "total": "17179869184"
+  },
+  "apple": {
+    "name": "Apple M2 Pro",
+    "ecpuCores": 4,
+    "pcpuCores": 6,
+    "gpuCores": 16,
+    "memoryGb": 16,
+    "swapTotalBytes": "8589934592",
+    "ramTotalBytes": "17179869184"
+  },
+  "writerId": "my1q31dy38xeal3gmmgm44amv49seriw"
+}

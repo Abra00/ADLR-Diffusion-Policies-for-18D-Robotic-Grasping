@@ -115,7 +115,7 @@ model = MLPWithVoxel(
     voxel_input_shape=(32,32,32)
 ).to(device)
 
-noise_scheduler = NoiseScheduler(num_timesteps=config["num_timesteps"])
+noise_scheduler = NoiseScheduler(num_timesteps=config["num_timesteps"], device=device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"])
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     optimizer,

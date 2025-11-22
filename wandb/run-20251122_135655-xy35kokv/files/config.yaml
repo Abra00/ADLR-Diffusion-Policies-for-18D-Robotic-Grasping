@@ -1,0 +1,70 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            9oqg6r74bakd4cder8kydwnosw1v24x1:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 16
+                    memoryGb: 16
+                    name: Apple M2 Pro
+                    pcpuCores: 6
+                    ramTotalBytes: "17179869184"
+                    swapTotalBytes: "8589934592"
+                codePath: Diff_train_test.py
+                codePathLocal: Diff_train_test.py
+                cpu_count: 10
+                cpu_count_logical: 10
+                disk:
+                    /:
+                        total: "994662584320"
+                        used: "405923913728"
+                email: lfrontini@gmx.de
+                executable: /Users/lucafrontini/anaconda3/envs/adlr-env-final/bin/python
+                git:
+                    commit: e571a351fee630934bb95cd9b3d53b46cd68165a
+                    remote: git@github.com:Abra00/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping.git
+                host: MacBook-Pro-von-Luca.local
+                memory:
+                    total: "17179869184"
+                os: macOS-26.1-arm64-arm-64bit
+                program: /Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Diff_train_test.py
+                python: CPython 3.10.19
+                root: /Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping
+                startedAt: "2025-11-22T12:56:55.156720Z"
+                writerId: 9oqg6r74bakd4cder8kydwnosw1v24x1
+        m: []
+        python_version: 3.10.19
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 16
+            "4": 3.10.19
+            "5": 0.23.0
+            "12": 0.23.0
+            "13": darwin-arm64
+batch_size:
+    value: 256
+embedding_size:
+    value: 128
+epochs:
+    value: 100
+eval_batch_size:
+    value: 1000
+hidden_layers:
+    value: 4
+hidden_size:
+    value: 512
+learning_rate:
+    value: 0.001
+num_timesteps:
+    value: 50
+save_images_step:
+    value: 50
