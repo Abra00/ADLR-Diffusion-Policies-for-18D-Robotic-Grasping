@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from src.Diff_model import MLPWithVoxel, NoiseScheduler
 from tqdm import tqdm
+import wandb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -24,7 +25,11 @@ config = {
     "embedding_size": 128,          # Size of embedding vector for voxel input
     "save_images_step": 50          # How often to generate and save samples
 }
-
+wandb.init(
+    project="adlr-diffusion_grasping",
+    job_type="training_diff",
+    config=config 
+)
 # ---- Load voxel and grasp data ----
 voxel_dir = "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_meshes"
 grasp_dir = grasp_dir = "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_scores"
@@ -148,9 +153,11 @@ for epoch in range(config["epochs"]):
         optimizer.step()
         optimizer.zero_grad() 
         losses.append(loss.item())
+        # Log step loss
+        wandb.log({"train/loss": loss.item(), "epoch": epoch})
         epoch_loss += loss.item()
         train_loader_tqdm.set_postfix(curr_train_loss=f"{epoch_loss / (i + 1):.8f}")
-    
+    wandb.log({"epoch_loss": epoch_loss / len(train_loader), "lr": scheduler.get_last_lr()[0], "epoch": epoch})
     scheduler.step()
     print(f"Epoch {epoch+1} finished | Avg Loss: {epoch_loss / len(train_loader):.6f}")
 
@@ -202,7 +209,7 @@ for epoch in range(config["epochs"]):
 
             # Store generated grasps with object IDs
             generated_data.append((obj_id, grasp_np))
-
+wandb.finish()
 # ---- Save model and results ----
 generated_data = np.array(generated_data, dtype=object)
 os.makedirs("exps", exist_ok=True)

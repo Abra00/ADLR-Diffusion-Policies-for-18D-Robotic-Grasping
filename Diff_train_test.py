@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from src.Diff_model import MLPWithVoxel, NoiseScheduler
 from tqdm import tqdm
+import wandb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -14,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 config = {
     "batch_size": 256,              # Training batch size
     "eval_batch_size": 1000,        # Batch size for evaluation
-    "epochs": 500,                  # Total training epochs
+    "epochs": 100,                  # Total training epochs
     "learning_rate": 1e-3,          # Optimizer learning rate
     "num_timesteps": 50,            # Number of diffusion timesteps
     "hidden_size": 512,             # Hidden layer size in the MLP
@@ -22,7 +23,11 @@ config = {
     "embedding_size": 128,          # Embedding size for voxel input
     "save_images_step": 50          # How often to generate sample grasps
 }
-
+wandb.init(
+    project="adlr-diffusion_grasping",
+    job_type="training_diff_test",
+    config=config 
+)
 # ---- Load voxel and grasp data ----
 voxel_dir = "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_meshes"
 grasp_dir = grasp_dir = "/Users/lucafrontini/Library/Mobile Documents/com~apple~CloudDocs/Uni/TUM/2. Semester /Advanced Deep Learning for Robotics/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_scores"
@@ -113,11 +118,11 @@ model = MLPWithVoxel(
 noise_scheduler = NoiseScheduler(num_timesteps=config["num_timesteps"])
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"])
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+"""scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(              # no scheduler for overfitting 
     optimizer,
     T_max=config["epochs"],
     eta_min=1e-6
-)
+)"""
 
 # ---- Training loop ----
 losses = []
@@ -157,13 +162,16 @@ for epoch in range(config["epochs"]):
         optimizer.step()
         optimizer.zero_grad()
         losses.append(loss.item())
+        # Log step loss
+        wandb.log({"train/loss": loss.item(), "epoch": epoch})
         epoch_loss += loss.item()
         
         # Update progress bar with current average loss
         train_loader_tqdm.set_postfix(curr_train_loss=f"{epoch_loss / (i + 1):.8f}")
+    wandb.log({"epoch_loss": epoch_loss / len(train_loader), "epoch": epoch})
     
     # Step learning rate scheduler at the end of the epoch
-    scheduler.step()
+    #scheduler.step().  # not needed for overfitting 
     print(f"Epoch {epoch+1} finished | Avg Loss: {epoch_loss / len(train_loader):.6f}")
 
     # ---- Generate sample grasps ----
@@ -191,10 +199,11 @@ for epoch in range(config["epochs"]):
 
             # Store generated grasps with object ID
             generated_data.append((obj_id, grasp_np))
-
+wandb.finish()
 # ---- Save results ----
 generated_data = np.array(generated_data, dtype=object)
 os.makedirs("exps", exist_ok=True)
 torch.save(model.state_dict(), "exps/model.pth")
 np.save("exps/generated_grasps_with_id.npy", np.array(generated_data, dtype=object), allow_pickle=True)
 np.save("exps/loss.npy", losses)
+
