@@ -126,6 +126,22 @@ class NoiseScheduler():
         self.posterior_mean_coef1 = self.betas * torch.sqrt(self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
         self.posterior_mean_coef2 = (1. - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1. - self.alphas_cumprod)
 
+        # Move all precomputed tensors to the device
+        self.betas = self.betas.to(self.device)
+        self.alphas = self.alphas.to(self.device)
+        self.alphas_cumprod = self.alphas_cumprod.to(self.device)
+        self.alphas_cumprod_prev = self.alphas_cumprod_prev.to(self.device)
+
+        self.sqrt_alphas_cumprod = self.sqrt_alphas_cumprod.to(self.device)
+        self.sqrt_one_minus_alphas_cumprod = self.sqrt_one_minus_alphas_cumprod.to(self.device)
+
+        self.sqrt_inv_alphas_cumprod = self.sqrt_inv_alphas_cumprod.to(self.device)
+        self.sqrt_inv_alphas_cumprod_minus_one = self.sqrt_inv_alphas_cumprod_minus_one.to(self.device)
+
+        self.posterior_mean_coef1 = self.posterior_mean_coef1.to(self.device)
+        self.posterior_mean_coef2 = self.posterior_mean_coef2.to(self.device)
+
+
     def reconstruct_x0(self, x_t, t, noise):
         s1 = self.sqrt_inv_alphas_cumprod[t]
         s2 = self.sqrt_inv_alphas_cumprod_minus_one[t]
@@ -164,6 +180,7 @@ class NoiseScheduler():
         return pred_prev_sample
 
     def add_noise(self, x_start, x_noise, timesteps):
+        timesteps = timesteps.to(self.device)
         s1 = self.sqrt_alphas_cumprod[timesteps]
         s2 = self.sqrt_one_minus_alphas_cumprod[timesteps]
 
