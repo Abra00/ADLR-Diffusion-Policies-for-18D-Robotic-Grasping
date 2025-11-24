@@ -85,7 +85,17 @@ def load_and_process_data(voxel_dir, grasp_dir, batch_size, test_size=0.2):
     val_dataset = GraspDataset(val_objs)
 
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=batch_size, 
+                              shuffle=True,
+                              num_workers=8,
+                              persistent_workers=True, 
+                              drop_last=True)
+    val_loader = DataLoader(val_dataset, 
+                            batch_size=batch_size, 
+                            shuffle=False,
+                            num_workers=4,
+                            persistent_workers=True, 
+                            drop_last=False)
 
     return train_loader, val_loader, train_dataset, val_dataset, feature_min, feature_max
