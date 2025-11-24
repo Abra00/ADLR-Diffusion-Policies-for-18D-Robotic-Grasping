@@ -9,7 +9,7 @@ from torch.nn import functional as F
 import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
-from lib.tiny_diffusion.positional_embeddings import PositionalEmbedding
+from src.positional_embeddings import PositionalEmbedding
 
 
 class Block(nn.Module):
@@ -39,19 +39,17 @@ class VoxelEncoder(nn.Module):
             # -> (batch_size, 256, 4, 4, 4)
             nn.Conv3d(128, 256, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm3d(256),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.AdaptiveAvgPool3d(1)
         )
-        
-        # Flatten the (256, 4, 4, 4) tensor
-        # 256 * 4 * 4 * 4 = 16384
         self.flatten = nn.Flatten()
         
         # Fully connected layer to get to the 19D latent vector
-        self.fc = nn.Linear(256 * 4 * 4 * 4, emb_size)
+        self.fc = nn.Linear(256, emb_size)
 
 
     def forward(self, x):
-        # x shape: (batch_size, 1, 32, 32, 32)
         x = self.conv_stack(x)
         x = self.flatten(x)
         x = self.fc(x)
@@ -96,9 +94,11 @@ class NoiseScheduler():
                  num_timesteps=1000,
                  beta_start=0.0001,
                  beta_end=0.02,
-                 beta_schedule="linear"):
+                 beta_schedule="linear",
+                 device=None):
 
         self.num_timesteps = num_timesteps
+        self.device = device if device is not None else torch.device("cpu")
         if beta_schedule == "linear":
             self.betas = torch.linspace(
                 beta_start, beta_end, num_timesteps, dtype=torch.float32)
@@ -123,6 +123,22 @@ class NoiseScheduler():
         # required for q_posterior
         self.posterior_mean_coef1 = self.betas * torch.sqrt(self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
         self.posterior_mean_coef2 = (1. - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1. - self.alphas_cumprod)
+
+        # Move all precomputed tensors to the device
+        self.betas = self.betas.to(self.device)
+        self.alphas = self.alphas.to(self.device)
+        self.alphas_cumprod = self.alphas_cumprod.to(self.device)
+        self.alphas_cumprod_prev = self.alphas_cumprod_prev.to(self.device)
+
+        self.sqrt_alphas_cumprod = self.sqrt_alphas_cumprod.to(self.device)
+        self.sqrt_one_minus_alphas_cumprod = self.sqrt_one_minus_alphas_cumprod.to(self.device)
+
+        self.sqrt_inv_alphas_cumprod = self.sqrt_inv_alphas_cumprod.to(self.device)
+        self.sqrt_inv_alphas_cumprod_minus_one = self.sqrt_inv_alphas_cumprod_minus_one.to(self.device)
+
+        self.posterior_mean_coef1 = self.posterior_mean_coef1.to(self.device)
+        self.posterior_mean_coef2 = self.posterior_mean_coef2.to(self.device)
+
 
     def reconstruct_x0(self, x_t, t, noise):
         s1 = self.sqrt_inv_alphas_cumprod[t]
@@ -162,6 +178,7 @@ class NoiseScheduler():
         return pred_prev_sample
 
     def add_noise(self, x_start, x_noise, timesteps):
+        timesteps = timesteps.to(self.device)
         s1 = self.sqrt_alphas_cumprod[timesteps]
         s2 = self.sqrt_one_minus_alphas_cumprod[timesteps]
 
@@ -172,4 +189,3 @@ class NoiseScheduler():
 
     def __len__(self):
         return self.num_timesteps
-
