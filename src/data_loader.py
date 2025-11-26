@@ -79,9 +79,16 @@ def load_and_process_data(data_dir, batch_size, test_size=0.2):
     full_min[7:] = JOINTS_MIN
     full_max[7:] = JOINTS_MAX
 
+# 1. First, split the data into train_objs and val_objs
     train_objs, val_objs = train_test_split(objects, test_size=test_size, random_state=42)
     
-    train_loader = DataLoader(GraspDataset(train_objs), batch_size=batch_size, shuffle=True, num_workers=8, persistent_workers=True, drop_last=True, pin_memory=True)
-    val_loader = DataLoader(GraspDataset(val_objs), batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True, drop_last=False, pin_memory=True)
+    # 2. NOW you can create the Datasets (because train_objs exists)
+    train_dataset = GraspDataset(train_objs)
+    val_dataset = GraspDataset(val_objs)
 
-    return train_loader, val_loader, None, None, full_min, full_max
+    # 3. Finally, wrap them in DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, persistent_workers=True, drop_last=True, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, persistent_workers=True, drop_last=False, pin_memory=True)
+
+    # 4. Return everything
+    return train_loader, val_loader, train_dataset, val_dataset, full_min, full_max
