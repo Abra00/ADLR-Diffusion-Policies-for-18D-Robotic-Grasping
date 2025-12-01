@@ -6,23 +6,8 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 class GraspDataset(Dataset):
-    """
-    The 'Translator'.
-    Takes a list of python dictionaries (raw data) and hands out 
-    PyTorch Tensors (math objects) one by one.
-    """
     def __init__(self, objects_list):
         self.items = []
-        
-        # TODO: Flatten the data.
-        # Input 'objects_list' is a list of OBJECTS (e.g., 50 mugs).
-        # Each object has 100 grasps.
-        # You need to turn this into a list of 5000 GRASPS.
-        # 
-        # Structure:
-        # for obj in objects_list:
-        #    for grasp in obj['grasps']:
-        #        self.items.append( ... )
         for obj in objects_list:
             voxel = obj['voxel_grid']
             grasps = obj['grasps']
@@ -48,13 +33,6 @@ class GraspDataset(Dataset):
                 item['object_id'])
 
 def load_and_process_data(data_dir, batch_size, test_size=0.1):
-    """
-    The 'Manager'.
-    1. Loads files from disk.
-    2. Normalizes data.
-    3. Splits into Train/Test.
-    4. Packages everything into DataLoaders.
-    """
     all_objects = []
     data_path = Path(data_dir)
     if not data_path.is_dir() : raise FileNotFoundError(f"Not found: {data_dir}")
