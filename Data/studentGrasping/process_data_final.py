@@ -61,7 +61,7 @@ def process_trial(config, global_scale, trial_path):
         mesh_path = trial_path / "mesh.obj"
         npz_path = trial_path / "recording.npz"
         
-        # Unique ID generation (Boilerplate)
+        # Unique ID generation
         parts = trial_path.parts
         unique_id = f"{parts[-3]}_{parts[-2]}_{parts[-1]}"
         output_path = Path(config["output_dir"]) / f"{unique_id}.npz"
@@ -120,7 +120,7 @@ def process_trial(config, global_scale, trial_path):
         return True
 
     except Exception as e:
-        print(f"FAILED {unique_id}: {e}") # Print the error!
+        print(f"FAILED {unique_id}: {e}")
         return False
 
 def main():
