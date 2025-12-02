@@ -14,8 +14,8 @@ MODEL_PATH = "exps/model_final.pth"
 STATS_PATH = "exps/normalization_stats.npz"
 
 MODEL_CONFIG = {
-    "hidden_size": 128, 
-    "hidden_layers": 3, 
+    "hidden_size": 256, 
+    "hidden_layers": 4, 
     "emb_size": 128, 
     "voxel_input_shape": (32, 32, 32) 
 }
