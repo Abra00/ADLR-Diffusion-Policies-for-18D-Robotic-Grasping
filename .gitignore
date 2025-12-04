@@ -1,9 +1,14 @@
 adlr/
 student_grasps_v1/
-processed_meshes/
+processed_meshes*
+processed_scores/
+processed_data_final/
+processed_data_safe/
 urdfs/
 models/
 wandb/
+old/
+exps*
 
 #git python template
 # Byte-compiled / optimized / DLL files
