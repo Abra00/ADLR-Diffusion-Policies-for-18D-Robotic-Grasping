@@ -27,15 +27,18 @@ class Encoder3D(nn.Module):
             # -> (batch_size, 256, 4, 4, 4)
             nn.Conv3d(128, 256, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm3d(256),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(0.2, inplace=True),
+
+            # Change the number of params from 2 million to 32 thousands
+            nn.AdaptiveAvgPool3d(1)
         )
         
         # Flatten the (256, 4, 4, 4) tensor
         # 256 * 4 * 4 * 4 = 16384
-        self.flatten = nn.Flatten()
+        #self.flatten = nn.Flatten()
         
         # Fully connected layer to get to the 19D latent vector
-        self.fc = nn.Linear(256 * 4 * 4 * 4, latent_dim)
+        self.fc = nn.Linear(256, latent_dim)
 
     def forward(self, x):
         # x shape: (batch_size, 1, 32, 32, 32)
