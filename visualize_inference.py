@@ -5,7 +5,7 @@ import pybullet
 import pybullet_data
 import os
 from pathlib import Path
-from src.model_new import DiffusionMLP
+from model import DiffusionMLP
 from src.noise_scheduler import NoiseScheduler
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

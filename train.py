@@ -6,9 +6,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from src.model_new import DiffusionMLP
+from model import DiffusionMLP
 from src.noise_scheduler import NoiseScheduler
-from src.dataloader_final import load_and_process_data
+from dataloader import load_and_process_data
 from src.ema import EMA
 import wandb
 # Enable CuDNN benchmark for speed boost on fixed input sizes
