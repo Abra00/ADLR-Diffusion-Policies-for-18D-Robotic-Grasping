@@ -45,7 +45,7 @@ def find_global_scale(root_dir, padding):
 
     print(f"Largest object: {max_extent:.4f}m")
 
-    # Math: We want (max_extent * scale) = (1.0 - padding)
+    # We want (max_extent * scale) = (1.0 - padding)
     global_scale = (1.0 - padding)/max_extent
     print(f"Global Scale Factor calculated: {global_scale:.4f}")
     print("This scale will be applied to ALL objects.\n")
@@ -130,15 +130,14 @@ def main():
     os.makedirs(CONFIG['output_dir'], exist_ok=True)
     
     
-    # 1. Get Scale
     scale = find_global_scale(root, CONFIG["padding"])
     print(f"Global Scale: {scale}")
     
-    # 2. Get Files
+    # Get all Files
     all_npz = list(root.rglob("recording.npz"))
     folders = [p.parent for p in all_npz]
     
-    # 3. Parallel Execution
+    # Parallel Execution
     process_func = partial(process_trial, CONFIG, scale)
     with multiprocessing.Pool(CONFIG["num_workers"]) as pool:
         list(tqdm(pool.imap_unordered(process_func, folders), total=len(folders)))
