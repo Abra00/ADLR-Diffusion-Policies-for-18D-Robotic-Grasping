@@ -61,8 +61,8 @@ def generate_grasps(model, scheduler, voxel_grid, num_samples=10):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", required=False, help="Path to .pth file", default= "exps_new/model_ep20_ema.pth")
-    parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default="/home/abra/Workspace/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_data_new/03710193_10e1051cbe10626e30a706157956b491_0.npz")
-    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default="/home/abra/Workspace/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/student_grasps_v1/03710193/10e1051cbe10626e30a706157956b491/0/mesh.obj")
+    parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default="/Data/studentGrasping/processed_data_new/03710193_10e1051cbe10626e30a706157956b491_0.npz")
+    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default="/Data/studentGrasping/student_grasps_v1/03710193/10e1051cbe10626e30a706157956b491/0/mesh.obj")
     parser.add_argument("--urdf_path", default="/Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
     parser.add_argument("--num_grasps", type=int, default=10, help="How many to generate")
     args = parser.parse_args()

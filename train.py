@@ -6,9 +6,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from model import DiffusionMLP
+from src.model import DiffusionMLP
 from src.noise_scheduler import NoiseScheduler
-from dataloader import load_and_process_data
+from src.dataloader import load_and_process_data
 from src.ema import EMA
 import wandb
 # Enable CuDNN benchmark for speed boost on fixed input sizes
@@ -18,7 +18,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # ---- CONFIGURATION ----
 config = {
-    "data_root" : "/home/abra/Workspace/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/processed_data_new",
+    "data_root" : "./Data/studentGrasping/processed_data_new",
     "batch_size": 64,
     "test_size": 0.1,
     "epochs": 200,
@@ -32,11 +32,7 @@ config = {
     "input_emb_dim": 64 #grasp
 }
 
-wandb.init(
-    project="adlr-diffusion_grasping",
-    job_type="training_diff",
-    config=config 
-)
+
 
 def train():
 
@@ -166,4 +162,9 @@ def train():
     wandb.finish()
 
 if __name__ == "__main__":
+    wandb.init(
+    project="adlr-diffusion_grasping",
+    job_type="training_diff",
+    config=config 
+)
     train()
