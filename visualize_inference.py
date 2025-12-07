@@ -5,7 +5,7 @@ import pybullet
 import pybullet_data
 import os
 from pathlib import Path
-from model import DiffusionMLP
+from src.model import DiffusionMLP
 from src.noise_scheduler import NoiseScheduler
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -61,9 +61,9 @@ def generate_grasps(model, scheduler, voxel_grid, num_samples=10):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", required=False, help="Path to .pth file", default= "exps_new/model_ep20_ema.pth")
-    parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default="/Data/studentGrasping/processed_data_new/03710193_10e1051cbe10626e30a706157956b491_0.npz")
-    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default="/Data/studentGrasping/student_grasps_v1/03710193/10e1051cbe10626e30a706157956b491/0/mesh.obj")
-    parser.add_argument("--urdf_path", default="/Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
+    parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default="./Data/studentGrasping/processed_data_new/02747177_1c3cf618a6790f1021c6005997c63924_0.npz")
+    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default="./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj")
+    parser.add_argument("--urdf_path", default="./Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
     parser.add_argument("--num_grasps", type=int, default=10, help="How many to generate")
     args = parser.parse_args()
 
@@ -100,7 +100,21 @@ def main():
         joints = (g[7:] + 1) / 2 * (joints_max - joints_min) + joints_min
         
         real_grasps.append((pos, rot, joints))
+    #safe grasps
+    pos_array = np.array([g[0] for g in real_grasps])
+    rot_array = np.array([g[1] for g in real_grasps])
+    joints_array = np.array([g[2] for g in real_grasps])
+    base_name = Path(args.npz_path).stem
+    output_dir = Path("generated_grasps")     #create new folder if neccesary
+    output_dir.mkdir(exist_ok=True)
+    save_path = output_dir / f"{base_name}_generated_grasps.npz"
+    np.savez(save_path,
+            position=pos_array,
+            orientation=rot_array,
+            joints=joints_array)
 
+    print(f"Saved generated grasps to {save_path}")
+    #simulate 
     print("Starting Simulation...")
     pybullet.connect(pybullet.GUI)
     pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
