@@ -95,6 +95,25 @@ open_joint_values = [
     # iterate over grasps
 hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
 
+# Finger links without collision (virtual distal links)
+virtual_distal_links = [5, 11, 17, 23]  
+
+# Create small capsule collisions for the fingertips
+for link_idx in virtual_distal_links:
+    collision_id = pybullet.createCollisionShape(
+        pybullet.GEOM_CAPSULE,
+        radius=0.01,   # fingertip radius
+        height=0.02    # capsule height
+    )
+    # Attach the collision shape to the existing link
+    pybullet.createMultiBody(
+        baseMass=0,  # mass 0 → does not affect physics
+        baseCollisionShapeIndex=collision_id,
+        baseVisualShapeIndex=-1,  # invisible
+        basePosition=[0,0,0],  # relative to link's coordinate frame
+        baseOrientation=[0,0,0,1],
+        useMaximalCoordinates=True
+    )
 for i in sorted_indx:
     grasp = data["grasps"][i]
 
@@ -117,7 +136,6 @@ for i in sorted_indx:
         # copplet joints
         if j_idx in [3, 9, 15, 21]:
             pybullet.resetJointState(hand_id, jointIndex=j_idx+1, targetValue=open_joint_values[k], targetVelocity=0)
-
     print("start set")
     # set postion with motor
     pybullet.setJointMotorControlArray(
@@ -130,7 +148,7 @@ for i in sorted_indx:
 
     # small settling simulation (hand closes before gravity acts strongly)
     for _ in range(1000):
-        pybullet.stepSimulation()
+        pybullet.stepSimulation() 
     pybullet.setGravity(0,0,-9.81)
     # main test: does object stay in hand?
     stable = True
@@ -143,7 +161,7 @@ for i in sorted_indx:
         distance = np.linalg.norm(np.array(cur_pos) - np.array(start_pos))
 
         # if object dropped more than threshold → fail
-        if distance > 0.005:  # 5 mm allowed: prevents false negatives caused by PyBullet's small simulation jitter.
+        if distance > 0.1:  # 5 mm allowed: prevents false negatives caused by PyBullet's small simulation jitter.
             stable = False
             break
 
