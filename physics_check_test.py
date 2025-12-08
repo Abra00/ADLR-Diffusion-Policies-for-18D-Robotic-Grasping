@@ -12,7 +12,7 @@ pybullet.connect(pybullet.GUI)
 
 # Load hand
 hand_id = pybullet.loadURDF(
-    "C:/Gits/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/urdfs/dlr2.urdf",
+    "./Data/studentGrasping/urdfs/dlr2.urdf",
     globalScaling=1,
     basePosition=[0, 0, 0],
     baseOrientation=pybullet.getQuaternionFromEuler([0, 0, 0]),
@@ -23,7 +23,7 @@ hand_id = pybullet.loadURDF(
 # Load object
 visualShapeId = pybullet.createVisualShape(
                 shapeType=pybullet.GEOM_MESH,
-                fileName="C:/Gits/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj",
+                fileName="./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj",
                 rgbaColor=[1,1,1,1],
                 specularColor=[0.4, .4, 0],
                 visualFramePosition=[0, 0, 0],
@@ -31,7 +31,7 @@ visualShapeId = pybullet.createVisualShape(
 
 collision_id = pybullet.createCollisionShape(
     shapeType=pybullet.GEOM_MESH,
-    fileName="C:/Gits/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj",
+    fileName="./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj",
     meshScale=1
 )
 object_id = pybullet.createMultiBody(
@@ -45,7 +45,7 @@ object_id = pybullet.createMultiBody(
 
                         
 # Load grasps
-data = np.load(Path("C:/Gits/ADLR-Diffusion-Policies-for-18D-Robotic-Grasping/Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/recording.npz"))
+data = np.load(Path("./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/recording.npz"))
 
 # Sort by grasp score
 sorted_indx = np.argsort(data["scores"])[::-1]
@@ -91,4 +91,4 @@ for i in sorted_indx:
         print(f"Grasp {i} FAILED — object dropped")
     input()
 
-    print("Finished evaluating all grasps.")
+print("Finished evaluating all grasps.")
