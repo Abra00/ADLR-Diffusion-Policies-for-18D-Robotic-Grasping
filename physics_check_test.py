@@ -32,7 +32,8 @@ visualShapeId = pybullet.createVisualShape(
 collision_id = pybullet.createCollisionShape(
     shapeType=pybullet.GEOM_MESH,
     fileName="./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj",
-    meshScale=1
+    meshScale=1,
+    flags=pybullet.GEOM_FORCE_CONCAVE_TRIMESH
 )
 object_id = pybullet.createMultiBody(
     baseMass=1,  
@@ -50,26 +51,39 @@ data = np.load(Path("./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a
 # Sort by grasp score
 sorted_indx = np.argsort(data["scores"])[::-1]
 print(data["grasps"].shape)
-pybullet.setGravity(0, 0, -9.81)
-pybullet.setTimeStep(1/240)
     # iterate over grasps
 for i in sorted_indx:
     grasp = data["grasps"][i]
 
+    #set object back:
+    pybullet.resetBasePositionAndOrientation(
+    bodyUniqueId=object_id,
+    posObj=[0,0,0],        
+    ornObj=[0,0,0,1]       
+    )
+    pybullet.resetBaseVelocity(object_id, linearVelocity=[0,0,0], angularVelocity=[0,0,0])
+
     # Set hand pose
-    pybullet.resetBasePositionAndOrientation(bodyUniqueId=hand_id, posObj=grasp[:3], ornObj=grasp[3:7])
-    
-    # Set joint angles
-    for k, j in enumerate([1,2,3, 7,8,9, 13,14,15, 19,20,21]):
-        pybullet.resetJointState(hand_id, jointIndex=j, targetValue=grasp[7 + k], targetVelocity=0)
-        # Set coupled joint
-        if j in [3, 9, 15, 21]:
-            pybullet.resetJointState(hand_id, jointIndex=j + 1, targetValue=grasp[7 + k], targetVelocity=0)
+    joint_values = grasp[7:19]
+    hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
+    # Temporarily disable gravity
+    pybullet.setGravity(0,0,0)
+    # set starting positon 
+    pybullet.resetBasePositionAndOrientation(hand_id, posObj=grasp[:3], ornObj=grasp[3:7])
+
+    # set postion with motor
+    pybullet.setJointMotorControlArray(
+        bodyUniqueId=hand_id,
+        jointIndices=hand_joints,  
+        controlMode=pybullet.POSITION_CONTROL,
+        targetPositions=joint_values,
+        forces=[100]*len(joint_values)
+    )
 
     # small settling simulation (hand closes before gravity acts strongly)
     for _ in range(200):
         pybullet.stepSimulation()
-
+    pybullet.setGravity(0,0,-9.81)
     # main test: does object stay in hand?
     stable = True
     start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)  #only safe starting position not orientation 

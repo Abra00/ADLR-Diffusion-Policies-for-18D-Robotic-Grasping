@@ -68,9 +68,6 @@ def main(grasps):
     positions = data["position"]      # (N,3)
     orientations = data["orientation"] # (N,4)
     joints = data["joints"]           # (N,12)
-    # SIMULATION SETTINGS
-    p.setGravity(0, 0, -9.81)
-    p.setTimeStep(1/240) #timesteps  for each simulation 
 
     # iterate over grasps
     for i in range(len(positions)):
@@ -78,19 +75,48 @@ def main(grasps):
         rot = orientations[i]
         joint_vals = joints[i]
         print(f"\n=== Testing grasp {i+1}/{len(positions)} ===")
+        # Temporarily disable gravity
+        p.setGravity(0,0,0)
 
-        # Set hand base position & orientation
+        # Set hand base position and orientation for current grasp
         p.resetBasePositionAndOrientation(hand_id, pos, rot)
 
-        # Set hand joint angles
-        for k, j_idx in enumerate(ACTIVE_JOINTS):
-            p.resetJointState(hand_id, j_idx, joint_vals[k])
-            if j_idx in COUPLED_JOINTS:
-                p.resetJointState(hand_id, j_idx+1, joint_vals[k])
+        # Move hand joints using POSITION_CONTROL for realistic grasp
+        p.setJointMotorControlArray(
+            bodyUniqueId=hand_id,
+            jointIndices=ACTIVE_JOINTS,
+            controlMode=p.POSITION_CONTROL,
+            targetPositions=joint_vals,
+            forces=[200]*len(ACTIVE_JOINTS)  # ensure firm grip
+        )
 
-        # small settling simulation (hand closes before gravity acts strongly)
+        # Apply movement to coupled joints
+        for k, j_idx in enumerate(ACTIVE_JOINTS):
+            if j_idx in COUPLED_JOINTS:
+                p.setJointMotorControl2(
+                    bodyUniqueId=hand_id,
+                    jointIndex=j_idx+1,
+                    controlMode=p.POSITION_CONTROL,
+                    targetPosition=joint_vals[k],
+                    force=200
+                )
+
+        # Reset object to start position and orientation
+        p.resetBasePositionAndOrientation(
+            bodyUniqueId=obj_id,
+            posObj=[0,0,0],
+            ornObj=[0,0,0,1]
+        )
+
+        # Reset object velocity to prevent unwanted motion
+        p.resetBaseVelocity(obj_id, linearVelocity=[0,0,0], angularVelocity=[0,0,0])
+
+        # Small simulation step to allow hand to close before gravity
         for _ in range(200):
             p.stepSimulation()
+
+        # Enable gravity for realistic object behavior
+        p.setGravity(0,0,-9.81)
 
         # main test: does object stay in hand?
         stable = True
