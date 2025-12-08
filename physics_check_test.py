@@ -1,11 +1,11 @@
 # Usage example: python physics_check_test.py 
 
 import pybullet 
-import pybullet_data
+
 import numpy as np
 from pathlib import Path
-import argparse
-import trimesh
+
+import time
 
 
 pybullet.connect(pybullet.GUI)
@@ -44,14 +44,57 @@ object_id = pybullet.createMultiBody(
     baseOrientation=[0,0,0,1]
 )
 
-                        
+# Good friction values for grasping
+FRICTION = 1.0       # radnom friction value
+SPIN_F = 0.01         # reduce twisting slip
+ROLL_F = 0.0001
+
+# Set friction for all links of the hand
+num_joints = pybullet.getNumJoints(hand_id)
+for j in range(num_joints):
+    pybullet.changeDynamics(
+        bodyUniqueId=hand_id,
+        linkIndex=j,
+        lateralFriction=FRICTION,
+        spinningFriction=SPIN_F,
+        rollingFriction=ROLL_F
+    )
+
+# Set friction for object
+pybullet.changeDynamics(
+    bodyUniqueId=object_id,
+    linkIndex=-1,
+    lateralFriction=FRICTION,
+    spinningFriction=SPIN_F,
+    rollingFriction=ROLL_F
+)                     
 # Load grasps
 data = np.load(Path("./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/recording.npz"))
 
 # Sort by grasp score
 sorted_indx = np.argsort(data["scores"])[::-1]
 print(data["grasps"].shape)
+hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
+open_joint_values = [
+    -0.5236,  # ringfinger_proximal -> nach außen
+    -0.3491,  # ringfinger_knuckle -> leicht gestreckt
+    -0.1745,  # ringfinger_middle -> leicht gestreckt
+
+    -0.5236,  # middlefinger_proximal -> nach außen
+    -0.3491,  # middlefinger_knuckle
+    -0.1745,  # middlefinger_middle
+
+    -0.5236,  # forefinger_proximal -> nach außen
+    -0.3491,  # forefinger_knuckle
+    -0.1745,  # forefinger_middle
+
+    -0.5236,  # thumb_proximal -> nach außen
+    -0.3491,  # thumb_knuckle
+    -0.1745,  # thumb_middle
+]
     # iterate over grasps
+hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
+
 for i in sorted_indx:
     grasp = data["grasps"][i]
 
@@ -65,23 +108,28 @@ for i in sorted_indx:
 
     # Set hand pose
     joint_values = grasp[7:19]
-    hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
     # Temporarily disable gravity
     pybullet.setGravity(0,0,0)
     # set starting positon 
     pybullet.resetBasePositionAndOrientation(hand_id, posObj=grasp[:3], ornObj=grasp[3:7])
+    for k, j_idx in enumerate(hand_joints):
+        pybullet.resetJointState(hand_id, jointIndex=j_idx, targetValue=open_joint_values[k], targetVelocity=0)
+        # copplet joints
+        if j_idx in [3, 9, 15, 21]:
+            pybullet.resetJointState(hand_id, jointIndex=j_idx+1, targetValue=open_joint_values[k], targetVelocity=0)
 
+    print("start set")
     # set postion with motor
     pybullet.setJointMotorControlArray(
         bodyUniqueId=hand_id,
         jointIndices=hand_joints,  
         controlMode=pybullet.POSITION_CONTROL,
         targetPositions=joint_values,
-        forces=[100]*len(joint_values)
+        forces=[200]*len(joint_values)
     )
 
     # small settling simulation (hand closes before gravity acts strongly)
-    for _ in range(200):
+    for _ in range(1000):
         pybullet.stepSimulation()
     pybullet.setGravity(0,0,-9.81)
     # main test: does object stay in hand?
