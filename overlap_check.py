@@ -25,30 +25,35 @@ def main(grasps):
     visualShapeId = p.createVisualShape(
         shapeType=p.GEOM_MESH,
         fileName=str(mesh_path),
-        rgbaColor=[1, 1, 1, 1],
-        specularColor=[0.4, 0.4, 0],
-        meshScale=[1, 1, 1]
+        rgbaColor=[1,1,1,1],
+        specularColor=[0.4,0.4,0],
+        visualFramePosition=[0,0,0],
+        meshScale=1
     )
-
     collision_id = p.createCollisionShape(
         shapeType=p.GEOM_MESH,
         fileName=str(mesh_path),
         meshScale=[1,1,1]
     )
-
     obj_id = p.createMultiBody(
-        baseMass=0,  # static object
+        baseMass=1,  
+        baseInertialFramePosition=[0, 0, 0],
         baseCollisionShapeIndex=collision_id,
         baseVisualShapeIndex=visualShapeId,
         basePosition=[0,0,0],
         baseOrientation=[0,0,0,1]
     )
+
+
+
     # LOAD HAND
     hand_id = p.loadURDF(
         urdf_path,
-        basePosition=[0,0,0],
+        globalScaling=1,
+        basePosition=[0, 0, 0],
+        baseOrientation=p.getQuaternionFromEuler([0, 0, 0]),
         useFixedBase=True,
-        flags=p.URDF_MAINTAIN_LINK_ORDER
+        flags=p.URDF_MAINTAIN_LINK_ORDER,
     )
 
     # LOAD GRASPS
