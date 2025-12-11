@@ -68,6 +68,23 @@ def main(grasps):
     positions = data["position"]      # (N,3)
     orientations = data["orientation"] # (N,4)
     joints = data["joints"]           # (N,12)
+    open_joint_values = [
+    -0.5236,  # ringfinger_proximal -> nach aussen
+    -0.3491,  # ringfinger_knuckle -> leicht gestreckt
+    -0.1745,  # ringfinger_middle -> leicht gestreckt
+
+    -0.5236,  # middlefinger_proximal -> nach aussen
+    -0.3491,  # middlefinger_knuckle
+    -0.1745,  # middlefinger_middle
+
+    -0.5236,  # forefinger_proximal -> nach aussen
+    -0.3491,  # forefinger_knuckle
+    -0.1745,  # forefinger_middle
+
+    -0.5236,  # thumb_proximal -> nach aussen
+    -0.3491,  # thumb_knuckle
+    -0.1745,  # thumb_middle
+]
 
     # iterate over grasps
     for i in range(len(positions)):
@@ -80,6 +97,33 @@ def main(grasps):
 
         # Set hand base position and orientation for current grasp
         p.resetBasePositionAndOrientation(hand_id, pos, rot)
+         # Reset object to start position and orientation
+        #set object back:
+        p.resetBasePositionAndOrientation(
+        bodyUniqueId=obj_id,
+        posObj=[0,0,0],        
+        ornObj=[0,0,0,1]       
+        )
+        #reset velocity 
+        p.resetBaseVelocity(obj_id, linearVelocity=[0,0,0], angularVelocity=[0,0,0])
+        # --- Set hand to OPEN position instantly (no physics) ---
+        for k, j_idx in enumerate(ACTIVE_JOINTS):
+            p.resetJointState(
+                bodyUniqueId=hand_id,
+                jointIndex=j_idx,
+                targetValue=open_joint_values[k],
+                targetVelocity=0
+            )
+
+            # Coupled joints: apply same open value
+            if j_idx in COUPLED_JOINTS:
+                p.resetJointState(
+                    bodyUniqueId=hand_id,
+                    jointIndex=j_idx + 1,
+                    targetValue=open_joint_values[k],
+                    targetVelocity=0
+                )
+
 
         # Move hand joints using POSITION_CONTROL for realistic grasp
         p.setJointMotorControlArray(
@@ -101,18 +145,10 @@ def main(grasps):
                     force=200
                 )
 
-        # Reset object to start position and orientation
-        p.resetBasePositionAndOrientation(
-            bodyUniqueId=obj_id,
-            posObj=[0,0,0],
-            ornObj=[0,0,0,1]
-        )
 
-        # Reset object velocity to prevent unwanted motion
-        p.resetBaseVelocity(obj_id, linearVelocity=[0,0,0], angularVelocity=[0,0,0])
 
         # Small simulation step to allow hand to close before gravity
-        for _ in range(200):
+        for _ in range(1000):
             p.stepSimulation()
 
         # Enable gravity for realistic object behavior
