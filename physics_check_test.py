@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Usage example: python physics_check_test.py 
 
 import pybullet 
@@ -76,44 +77,29 @@ sorted_indx = np.argsort(data["scores"])[::-1]
 print(data["grasps"].shape)
 hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
 open_joint_values = [
-    -0.5236,  # ringfinger_proximal -> nach außen
+    -0.5236,  # ringfinger_proximal -> nach aussen
     -0.3491,  # ringfinger_knuckle -> leicht gestreckt
     -0.1745,  # ringfinger_middle -> leicht gestreckt
 
-    -0.5236,  # middlefinger_proximal -> nach außen
+    -0.5236,  # middlefinger_proximal -> nach aussen
     -0.3491,  # middlefinger_knuckle
     -0.1745,  # middlefinger_middle
 
-    -0.5236,  # forefinger_proximal -> nach außen
+    -0.5236,  # forefinger_proximal -> nach aussen
     -0.3491,  # forefinger_knuckle
     -0.1745,  # forefinger_middle
 
-    -0.5236,  # thumb_proximal -> nach außen
+    -0.5236,  # thumb_proximal -> nach aussen
     -0.3491,  # thumb_knuckle
     -0.1745,  # thumb_middle
 ]
     # iterate over grasps
 hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
 
-# Finger links without collision (virtual distal links)
-virtual_distal_links = [5, 11, 17, 23]  
 
-# Create small capsule collisions for the fingertips
-for link_idx in virtual_distal_links:
-    collision_id = pybullet.createCollisionShape(
-        pybullet.GEOM_CAPSULE,
-        radius=0.01,   # fingertip radius
-        height=0.02    # capsule height
-    )
-    # Attach the collision shape to the existing link
-    pybullet.createMultiBody(
-        baseMass=0,  # mass 0 → does not affect physics
-        baseCollisionShapeIndex=collision_id,
-        baseVisualShapeIndex=-1,  # invisible
-        basePosition=[0,0,0],  # relative to link's coordinate frame
-        baseOrientation=[0,0,0,1],
-        useMaximalCoordinates=True
-    )
+#final joints of each finger 
+final_joints_indices_in_hand_joints = [2, 5, 8, 11]
+
 for i in sorted_indx:
     grasp = data["grasps"][i]
 
@@ -137,18 +123,35 @@ for i in sorted_indx:
         if j_idx in [3, 9, 15, 21]:
             pybullet.resetJointState(hand_id, jointIndex=j_idx+1, targetValue=open_joint_values[k], targetVelocity=0)
     print("start set")
-    # set postion with motor
+    # ------------------------
+    # Phase 1: Move hand to grasp pose (Position-Control)
+    # ------------------------
+    q_desired = joint_values.copy()
+    for idx in final_joints_indices_in_hand_joints:
+        q_desired[idx] += 0.1
     pybullet.setJointMotorControlArray(
-        bodyUniqueId=hand_id,
-        jointIndices=hand_joints,  
+        hand_id, hand_joints,
         controlMode=pybullet.POSITION_CONTROL,
-        targetPositions=joint_values,
-        forces=[200]*len(joint_values)
+        targetPositions=q_desired,
+        forces=[1]*len(hand_joints)  # N·m
     )
 
-    # small settling simulation (hand closes before gravity acts strongly)
-    for _ in range(1000):
-        pybullet.stepSimulation() 
+    for x in range(200):  # max steps
+        pybullet.stepSimulation()
+        
+
+ 
+    # ------------------------
+    # Phase 2: Hold grip with maximum torque (Torque-Control)
+    # ------------------------
+    pybullet.setJointMotorControlArray(
+        hand_id, hand_joints,
+        controlMode=pybullet.TORQUE_CONTROL,
+        forces=[1.0]*len(hand_joints)  # N·m constant torque to hold object
+    )
+    print("grasping")
+    y=pybullet.getJointStates(hand_id,hand_joints)
+    print([j[-1] for j in y]) 
     pybullet.setGravity(0,0,-9.81)
     # main test: does object stay in hand?
     stable = True
