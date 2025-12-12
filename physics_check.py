@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 import argparse
 import trimesh
+import time
 
 COUPLED_JOINTS = [3,9,15,21]
 ACTIVE_JOINTS = [1,2,3,7,8,9,13,14,15,19,20,21]
@@ -27,6 +28,8 @@ def main(grasps):
     print("Mesh-Volumen:", volume) # unit?
     rho = 100  # kg/m^3
     mass = volume * rho
+    print("Objekt-Masss:", mass, "kg")
+    
 
     #load object
     visualShapeId = p.createVisualShape(
@@ -60,7 +63,30 @@ def main(grasps):
         useFixedBase=True,
         flags=p.URDF_MAINTAIN_LINK_ORDER,
     )
+    # Good friction values for grasping
+    FRICTION = 1.0       # radnom friction value
+    SPIN_F = 0.01         # reduce twisting slip
+    ROLL_F = 0.0001
 
+    # Set friction for all links of the hand
+    num_joints = p.getNumJoints(hand_id)
+    for j in range(num_joints):
+        p.changeDynamics(
+            bodyUniqueId=hand_id,
+            linkIndex=j,
+            lateralFriction=FRICTION,
+            spinningFriction=SPIN_F,
+            rollingFriction=ROLL_F
+        )
+
+    # Set friction for object
+    p.changeDynamics(
+        bodyUniqueId=obj_id,
+        linkIndex=-1,
+        lateralFriction=FRICTION,
+        spinningFriction=SPIN_F,
+        rollingFriction=ROLL_F
+    )  
     # LOAD GRASPS
     grasp_dir = Path("./generated_grasps") # Folder where grasps are stored
     grasp_path = grasp_dir/ grasps.name
@@ -125,32 +151,24 @@ def main(grasps):
                 )
 
 
-        # Move hand joints using POSITION_CONTROL for realistic grasp
+        # ------------------------
+        # Move hand to grasp pose (Position-Control)
+        # ------------------------
+        q_desired = joint_vals+0.2 #offest to get contact 
         p.setJointMotorControlArray(
-            bodyUniqueId=hand_id,
-            jointIndices=ACTIVE_JOINTS,
+            hand_id, ACTIVE_JOINTS,
             controlMode=p.POSITION_CONTROL,
-            targetPositions=joint_vals,
-            forces=[200]*len(ACTIVE_JOINTS)  # ensure firm grip
+            targetPositions=q_desired,
+            forces=[1]*len(ACTIVE_JOINTS)  # N·m
         )
 
-        # Apply movement to coupled joints
-        for k, j_idx in enumerate(ACTIVE_JOINTS):
-            if j_idx in COUPLED_JOINTS:
-                p.setJointMotorControl2(
-                    bodyUniqueId=hand_id,
-                    jointIndex=j_idx+1,
-                    controlMode=p.POSITION_CONTROL,
-                    targetPosition=joint_vals[k],
-                    force=200
-                )
-
-
-
-        # Small simulation step to allow hand to close before gravity
-        for _ in range(1000):
+        for x in range(200):  # let the hand grap first 
             p.stepSimulation()
-
+            time.sleep(1/240) # only visualisation
+  
+        print("Final grasp strenght")
+        y=p.getJointStates(hand_id,ACTIVE_JOINTS)
+        print([j[-1] for j in y])   
         # Enable gravity for realistic object behavior
         p.setGravity(0,0,-9.81)
 

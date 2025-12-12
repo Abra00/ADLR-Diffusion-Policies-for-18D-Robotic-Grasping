@@ -124,31 +124,23 @@ for i in sorted_indx:
             pybullet.resetJointState(hand_id, jointIndex=j_idx+1, targetValue=open_joint_values[k], targetVelocity=0)
     print("start set")
     # ------------------------
-    # Phase 1: Move hand to grasp pose (Position-Control)
+    # Move hand to grasp pose (Position-Control)
     # ------------------------
-    q_desired = joint_values.copy()
-    for idx in final_joints_indices_in_hand_joints:
-        q_desired[idx] += 0.1
+    q_desired = joint_values+0.2 #offest to get contact 
     pybullet.setJointMotorControlArray(
         hand_id, hand_joints,
         controlMode=pybullet.POSITION_CONTROL,
         targetPositions=q_desired,
         forces=[1]*len(hand_joints)  # N·m
     )
-
-    for x in range(200):  # max steps
+    for x in range(500):  # let the hand grap first 
         pybullet.stepSimulation()
+        print("grasping")
+        y=pybullet.getJointStates(hand_id,hand_joints)
+        print([j[-1] for j in y]) 
         
 
- 
-    # ------------------------
-    # Phase 2: Hold grip with maximum torque (Torque-Control)
-    # ------------------------
-    pybullet.setJointMotorControlArray(
-        hand_id, hand_joints,
-        controlMode=pybullet.TORQUE_CONTROL,
-        forces=[1.0]*len(hand_joints)  # N·m constant torque to hold object
-    )
+
     print("grasping")
     y=pybullet.getJointStates(hand_id,hand_joints)
     print([j[-1] for j in y]) 
@@ -164,7 +156,7 @@ for i in sorted_indx:
         distance = np.linalg.norm(np.array(cur_pos) - np.array(start_pos))
 
         # if object dropped more than threshold → fail
-        if distance > 0.1:  # 5 mm allowed: prevents false negatives caused by PyBullet's small simulation jitter.
+        if distance > 0.005:  # 5 mm allowed: prevents false negatives caused by PyBullet's small simulation jitter.
             stable = False
             break
 
