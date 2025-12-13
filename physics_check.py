@@ -154,7 +154,7 @@ def main(grasps):
         # ------------------------
         # Move hand to grasp pose (Position-Control)
         # ------------------------
-        q_desired = joint_vals+0.2 #offest to get contact 
+        q_desired = joint_vals+0.1 #offest to get contact 
         p.setJointMotorControlArray(
             hand_id, ACTIVE_JOINTS,
             controlMode=p.POSITION_CONTROL,

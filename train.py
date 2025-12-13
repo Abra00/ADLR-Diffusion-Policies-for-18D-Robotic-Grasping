@@ -21,7 +21,7 @@ config = {
     "data_root" : "./Data/studentGrasping/processed_data_new",
     "batch_size": 64,
     "test_size": 0.1,
-    "epochs": 200,
+    "epochs": 400,
     "hidden_size": 512,
     "hidden_layers": 6,
     "save_dir": "./exps_new",
@@ -29,10 +29,30 @@ config = {
     "learning_rate": 2e-4,
     "resolution": 32,
     "embeding_size": 256, #time + voxel before 128
-    "input_emb_dim": 64 #grasp
+    "input_emb_dim": 64, #grasp
+    "scale": 2500       #scaling in input_embedding
 }
+# ---- EARLY STOPPING CLASS ----
+class EarlyStopping:
+    def __init__(self, patience=15, min_delta=0.0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_loss = float('inf')
+        self.counter = 0
+        self.stop = False
+        self.best_state_dict = None  # safes the current model 
 
+    def step(self, val_loss, model):
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+            # safe only intern 
+            self.best_state_dict = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+        else:
+            self.counter += 1
 
+        if self.counter >= self.patience:
+            self.stop = True
 
 def train():
 
@@ -51,12 +71,15 @@ def train():
     )
 
     noise_scheduler = NoiseScheduler(num_timesteps=config["num_timesteps"], device=device)
+   
+    early_stopping = EarlyStopping(patience=20, min_delta=1e-5)
 
     model = DiffusionMLP(
         hidden_size=config["hidden_size"],
         num_layers=config["hidden_layers"],
         emb_size=config['embeding_size'],
-        input_emb_dim=config['input_emb_dim']
+        input_emb_dim=config['input_emb_dim'],
+        scale=config['scale']
     )
     model.to(device)
 
@@ -143,7 +166,20 @@ def train():
         avg_val_loss = np.mean(val_losses)
         print(f"Epoch {epoch+1} | Validation Loss: {avg_val_loss:.6f}")
         wandb.log({"val_loss": avg_val_loss, "epoch": epoch+1})
-        
+        # ---- EARLY STOPPING ----
+        early_stopping.step(avg_val_loss, model)
+        if early_stopping.stop:
+            print(f"Early stopping at epoch {epoch+1} | Best val loss: {early_stopping.best_loss:.6f}")
+
+            # load best model from internal storage 
+            model.load_state_dict(early_stopping.best_state_dict)
+
+            # safe now 
+            save_path = f"{config['save_dir']}/model_final.pth"
+            torch.save(model.state_dict(), save_path)
+            print(f"Saved early-stop checkpoint to {save_path}")
+
+            break
         # Save Checkpoint every 10 epochs
         if (epoch + 1) % 20 == 0:
             # 1. Swap current weights for EMA weights
@@ -157,8 +193,10 @@ def train():
             # 3. Swap back to noisy weights to continue training math correctly
             ema.restore(model)
 
-    torch.save(model.state_dict(), f"{config['save_dir']}/model_final.pth")
-    print(f"Saved final model. Training is done")
+    if not early_stopping.stop:
+        save_path = f"{config['save_dir']}/model_final.pth"
+        torch.save(model.state_dict(), save_path)
+        print(f"Saved final model. Training is done")
     wandb.finish()
 
 if __name__ == "__main__":

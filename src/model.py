@@ -79,7 +79,8 @@ class DiffusionMLP(nn.Module):
                  num_layers=4,
                  emb_size=256,
                  dropout=0.1,
-                 input_emb_dim=None):
+                 input_emb_dim=None,
+                 scale=2500):
         super().__init__()
         
         self.input_emb_dim = input_emb_dim
@@ -94,7 +95,7 @@ class DiffusionMLP(nn.Module):
         if input_emb_dim is not None:
             # OPTION A: High Precision Mode
             # We use Sinusoidal embeddings, but control the size with 'input_emb_dim'
-            self.input_mlp = PositionalEmbedding(input_emb_dim, "sinusoidal", scale=25.0)
+            self.input_mlp = PositionalEmbedding(input_emb_dim, "sinusoidal", scale=scale)
             print(f"using inp_emb_dim {input_emb_dim}")
             
             # The input to the main network grows: 19 * 32 = 608
