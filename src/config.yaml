@@ -1,0 +1,27 @@
+method: random
+
+metric:
+  name: val_loss
+  goal: minimize
+
+parameters:
+  batch_size:
+    values: [32, 64, 128, 256, 512]
+
+  hidden_size:
+    values: [128, 256, 512, 1024]
+
+  hidden_layers:
+    values: [4, 6, 8, 10]
+
+  learning_rate:
+    values: [1e-4, 2e-4, 5e-4]
+
+  input_emb_dim:
+    values: [32, 64, 128,256]
+
+  scale:
+    values: [25, 500, 1000, 2500]
+
+  epochs:
+    value: 400
