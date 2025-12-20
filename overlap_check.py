@@ -44,8 +44,6 @@ def main(grasps):
         baseOrientation=[0,0,0,1]
     )
 
-
-
     # LOAD HAND
     hand_id = p.loadURDF(
         urdf_path,

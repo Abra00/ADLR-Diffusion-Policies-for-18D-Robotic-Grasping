@@ -16,7 +16,8 @@ model_config = {
     "hidden_size": 512,
     "hidden_layers": 6, 
     "emb_size": 256, 
-    "input_emb_dim": 64
+    "input_emb_dim": 64,
+    "scale": 2500
 }
 
 # Physical Limits (from urdf)
@@ -60,7 +61,7 @@ def generate_grasps(model, scheduler, voxel_grid, num_samples=10):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", required=False, help="Path to .pth file", default= "exps_new/model_ep20_ema.pth")
+    parser.add_argument("--model_path", required=False, help="Path to .pth file", default= "exps_new/model_final.pth")
     parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default="./Data/studentGrasping/processed_data_new/02747177_1c3cf618a6790f1021c6005997c63924_0.npz")
     parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default="./Data/studentGrasping/student_grasps_v1/02747177/1c3cf618a6790f1021c6005997c63924/0/mesh.obj")
     parser.add_argument("--urdf_path", default="./Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
@@ -78,7 +79,8 @@ def main():
         hidden_size=model_config["hidden_size"],
         num_layers=model_config["hidden_layers"],
         emb_size=model_config['emb_size'],
-        input_emb_dim=model_config['input_emb_dim']
+        input_emb_dim=model_config['input_emb_dim'],
+        scale=model_config['scale']
     )
     model.to(device)
     model.load_state_dict(torch.load(args.model_path, map_location=device))

@@ -10,12 +10,9 @@ class GraspDataset(Dataset):
     def __init__(self, objects_list):
         self.items = []
         
-        # --- CHANGE 1: Pre-calculation Loop ---
         print(f"Caching {len(objects_list)} objects to RAM... (This takes ~60s)")
         
         for obj in tqdm(objects_list, desc="Processing Tensors"):
-            # 1. Convert Voxel to Tensor ONCE (Cpu Work)
-            # The old code did this in __getitem__ (millions of times). We do it once.
             voxel_tensor = torch.from_numpy(obj['voxel_grid']).float()
             
             # Ensure correct shape (1, 32, 32, 32)
@@ -25,11 +22,11 @@ class GraspDataset(Dataset):
             grasps = obj['grasps']
             obj_id = obj.get('object_id', 'unknown') # Handle potential missing ID
             
-            # 2. Convert each grasp to Tensor ONCE
+            # Convert each grasp to Tensor ONCE
             for g in grasps:
                 g_tensor = torch.from_numpy(g).float()
                 
-                # 3. Store the TENSORS in the list, not the raw dictionaries
+                # Store the TENSORS in the list, not the raw dictionaries
                 self.items.append({
                     'voxel': voxel_tensor, 
                     'grasp': g_tensor,
@@ -47,7 +44,7 @@ class GraspDataset(Dataset):
         # New code: Just returns the pre-made tensor (Instant!)
         item = self.items[idx]
         
-        # We return 3 items (includes ID for debugging), your loop ignores the 3rd if not needed
+        # We return 3 items (includes ID for debugging)
         return item['grasp'], item['voxel'], item['obj_id']
 
 def load_and_process_data(data_dir, batch_size, test_size=0.1):
@@ -57,15 +54,13 @@ def load_and_process_data(data_dir, batch_size, test_size=0.1):
     if not data_path.is_dir(): 
         raise FileNotFoundError(f"Not found: {data_dir}")
 
-    # 1. Find Files
     files = sorted(list(data_path.glob("*.npz")))
     print(f"Found {len(files)} files. Loading from disk...")
 
-    # 2. Read from Disk (This is the only slow part, runs once)
+    # Read from Disk
     for f in tqdm(files, desc="Disk I/O"):
         try: 
             data = np.load(str(f))
-            # We just grab the numpy arrays. Conversion happens in the Dataset class.
             all_objects.append({
                 'voxel_grid': data['voxel_sdf'],
                 'grasps': data['grasps'],
@@ -79,10 +74,8 @@ def load_and_process_data(data_dir, batch_size, test_size=0.1):
             
     if not all_objects: raise ValueError("No data loaded!")
 
-    # 3. Split
     train_objs, val_objs = train_test_split(all_objects, test_size=test_size, random_state=42)
     
-    # 4. Create Datasets (Triggers the RAM Caching)
     print("Preparing Training Set...")
     train_dataset = GraspDataset(train_objs)
     print("Preparing Validation Set...")
