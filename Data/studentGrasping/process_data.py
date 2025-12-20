@@ -12,10 +12,10 @@ from pathlib import Path
 # ---- CONFIGURATION ----
 CONFIG = {
     "input_dir": "student_grasps_v1",
-    "output_dir": "processed_data_new",
+    "output_dir": "processed_data",
     "resolution": 32,           # 32x32x32 grid
     "padding": 0.1,             # 10% buffer
-    "num_workers": 8,           
+    "num_workers": 4,           
     "overwrite": True,
     "grasp_threshold": 3
 }
