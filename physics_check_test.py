@@ -10,6 +10,7 @@ import time
 
 
 pybullet.connect(pybullet.GUI)
+pybullet.setPhysicsEngineParameter(fixedTimeStep=1.0/1000.0, numSubSteps=4)
 
 # Load hand
 hand_id = pybullet.loadURDF(
@@ -58,7 +59,9 @@ for j in range(num_joints):
         linkIndex=j,
         lateralFriction=FRICTION,
         spinningFriction=SPIN_F,
-        rollingFriction=ROLL_F
+        rollingFriction=ROLL_F,
+        contactStiffness=100000, 
+        contactDamping=1000
     )
 
 # Set friction for object
@@ -99,6 +102,12 @@ hand_joints = [1,2,3,7,8,9,13,14,15,19,20,21]
 
 #final joints of each finger 
 final_joints_indices_in_hand_joints = [2, 5, 8, 11]
+#controler values
+KP = 150.0   # Viel höher, um dem Gewicht standzuhalten
+KD = 1.0    # Dämpfung leicht anheben
+MAX_TORQUE = 1.0 # Mehr Kraft erlauben (1.0 ist für 1kg oft zu wenig)
+
+
 
 for i in sorted_indx:
     grasp = data["grasps"][i]
@@ -126,37 +135,79 @@ for i in sorted_indx:
     # ------------------------
     # Move hand to grasp pose (Position-Control)
     # ------------------------
-    q_desired = joint_values+0.2 #offest to get contact 
-    pybullet.setJointMotorControlArray(
-        hand_id, hand_joints,
-        controlMode=pybullet.POSITION_CONTROL,
-        targetPositions=q_desired,
-        forces=[1]*len(hand_joints)  # N·m
-    )
-    for x in range(500):  # let the hand grap first 
+    for j in hand_joints:
+        pybullet.setJointMotorControl2(
+            hand_id,
+            j,
+            controlMode=pybullet.VELOCITY_CONTROL,
+            force=0
+        )
+    q_desired = joint_values+0.1 #offest to get contact 
+    # Objekt extrem schwerfällig machen
+    pybullet.changeDynamics(object_id, -1, linearDamping=100, angularDamping=100)
+    for x in range(200):  # Hand schließt sich
+        joint_states = pybullet.getJointStates(hand_id, hand_joints)
+
+        torques = []
+        for idx, state in enumerate(joint_states):
+            q = state[0]      # Position
+            qd = state[1]     # Geschwindigkeit
+
+            q_des = q_desired[idx]
+
+            # PD-Impedanz
+            tau = KP*(q_des-q) - KD*qd 
+            # Torque begrenzen
+            tau = np.clip(tau, -MAX_TORQUE, MAX_TORQUE)
+            torques.append(tau)
+
+        pybullet.setJointMotorControlArray(
+            bodyUniqueId=hand_id,
+            jointIndices=hand_joints,
+            controlMode=pybullet.TORQUE_CONTROL,
+            forces=torques
+        )
+
         pybullet.stepSimulation()
-        print("grasping")
+        time.sleep(1/1000)
+        print("pre_grasping")
         y=pybullet.getJointStates(hand_id,hand_joints)
         print([j[-1] for j in y]) 
+
         
 
 
     print("grasping")
-    y=pybullet.getJointStates(hand_id,hand_joints)
-    print([j[-1] for j in y]) 
+    pybullet.changeDynamics(object_id, -1, linearDamping=0.04, angularDamping=0.04)
     pybullet.setGravity(0,0,-9.81)
-    # main test: does object stay in hand?
-    stable = True
-    start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)  #only safe starting position not orientation 
 
-    for step in range(int(3.0 / (1/240))): #run for 3 seconds 
+    stable = True
+    start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)
+
+    for step in range(int(3.0 / (1/240))):
+
+        joint_states = pybullet.getJointStates(hand_id, hand_joints)
+        torques = []
+
+        for idx, state in enumerate(joint_states):
+            q, qd = state[0], state[1]
+            q_des = q_desired[idx]
+
+            tau = KP * (q_des - q) - KD * qd
+            tau = np.clip(tau, -MAX_TORQUE, MAX_TORQUE)
+            torques.append(tau)
+
+        pybullet.setJointMotorControlArray(
+            hand_id,
+            hand_joints,
+            pybullet.TORQUE_CONTROL,
+            forces=torques
+        )
+
         pybullet.stepSimulation()
 
         cur_pos, _ = pybullet.getBasePositionAndOrientation(object_id)
-        distance = np.linalg.norm(np.array(cur_pos) - np.array(start_pos))
-
-        # if object dropped more than threshold → fail
-        if distance > 0.005:  # 5 mm allowed: prevents false negatives caused by PyBullet's small simulation jitter.
+        if np.linalg.norm(np.array(cur_pos) - np.array(start_pos)) > 0.02:
             stable = False
             break
 

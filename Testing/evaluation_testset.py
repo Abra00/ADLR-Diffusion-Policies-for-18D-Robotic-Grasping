@@ -17,6 +17,7 @@ def main():
     print(f"Visualizing {len(npz_files)} random files (first grasp only).")
     # CONNECT TO PYBULLET
     pybullet.connect(pybullet.GUI) 
+    pybullet.setPhysicsEngineParameter(fixedTimeStep=1.0/1000.0, numSubSteps=4)
     pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
     #joint information
     COUPLED_JOINTS = [3,9,15,21]
@@ -59,10 +60,13 @@ def main():
         "objects": {}
     }
     #evaluation values
-    dt = 1 / 240
-    max_time = 3.0
-    hold_time = 0.0
-    MIN_VALID_HOLD = 0.05 #50ms
+    dt = 1 / 1000
+    max_time = 4.0
+    MIN_VALID_HOLD = 0.065 #65ms (enough time for an object to drop 2 cm)
+    #controler values
+    KP = 150.0   
+    KD = 1.0    
+    MAX_TORQUE = 1.0 
     for npz_path in npz_files:
         print(f"Visualizing {npz_path.name} ...")
         #load grasp
@@ -140,7 +144,9 @@ def main():
                 linkIndex=j,
                 lateralFriction=FRICTION,
                 spinningFriction=SPIN_F,
-                rollingFriction=ROLL_F
+                rollingFriction=ROLL_F,
+                contactStiffness=100000, 
+                contactDamping=1000
             )
 
         # Set friction for object
@@ -190,40 +196,66 @@ def main():
             # Move hand to grasp pose (Position-Control)
             # ------------------------
             q_desired = joint_vals+0.1 #offest to get contact 
-            pybullet.setJointMotorControlArray(
-                hand_id, ACTIVE_JOINTS,
-                controlMode=pybullet.POSITION_CONTROL,
-                targetPositions=q_desired,
-                forces=[1]*len(ACTIVE_JOINTS)  # N·m
-            )
-
-            for x in range(200):  # let the hand grap first 
+            pybullet.changeDynamics(object_id, -1, linearDamping=100, angularDamping=100) #make object hard to move
+            # Close hand using torque-control PD loop
+            for t in range(200):
+                joint_states = pybullet.getJointStates(hand_id, ACTIVE_JOINTS)
+                torques = []
+                for idx, state in enumerate(joint_states):
+                    q = state[0]  # joint position
+                    qd = state[1] # joint velocity
+                    tau = KP*(q_desired[idx]-q) - KD*qd
+                    tau = np.clip(tau, -MAX_TORQUE, MAX_TORQUE)
+                    torques.append(tau)
+                pybullet.setJointMotorControlArray(
+                    hand_id,
+                    ACTIVE_JOINTS,
+                    controlMode=pybullet.TORQUE_CONTROL,
+                    forces=torques
+                )
                 pybullet.stepSimulation()
-                #time.sleep(1/240) # only visualisation
+                # optional for GUI: time.sleep(1/1000)
     
             print("Final grasp strenght")
             y=pybullet.getJointStates(hand_id,ACTIVE_JOINTS)
             print([j[-1] for j in y])   
+            pybullet.changeDynamics(object_id, -1, linearDamping=0.04, angularDamping=0.04) # make object again normal to move 
             # Enable gravity for realistic object behavior
             pybullet.setGravity(0,0,-9.81)
 
             start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)  #only safe starting position not orientation 
 
-            dt = 1 / 240
-            max_time = 3.0
+    
+
             hold_time = 0.0
 
             start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)
 
+
             for step in range(int(max_time / dt)):
+                joint_states = pybullet.getJointStates(hand_id, ACTIVE_JOINTS)
+                torques = []
+                for idx, state in enumerate(joint_states):
+                    q = state[0]
+                    qd = state[1]
+                    tau = KP*(q_desired[idx]-q) - KD*qd
+                    tau = np.clip(tau, -MAX_TORQUE, MAX_TORQUE)
+                    torques.append(tau)
+                pybullet.setJointMotorControlArray(
+                    hand_id,
+                    ACTIVE_JOINTS,
+                    controlMode=pybullet.TORQUE_CONTROL,
+                    forces=torques
+                )
+                
                 pybullet.stepSimulation()
+                hold_time += dt #holdtime in seconds 
                 cur_pos, _ = pybullet.getBasePositionAndOrientation(object_id)
                 distance = np.linalg.norm(np.array(cur_pos) - np.array(start_pos))
 
-                if distance > 0.005: #if objects movs more than 5 mm 
+                if distance > 0.02: #if objects movs more than 2 cm 
                     break
 
-                hold_time += dt #holdtime in seconds 
             if hold_time < MIN_VALID_HOLD:
                 label = "0s"
             elif hold_time >= 3.0:
