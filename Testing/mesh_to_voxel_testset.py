@@ -12,7 +12,7 @@ from pathlib import Path
 
 # ---- CONFIGURATION ----
 CONFIG = {
-    "input_dir": ".\Data\Testset\MultiGrippperGrasp",
+    "input_dir": ".\Data\Testset\MultiGripperGrasp",
     "output_dir": ".\Data\Testset\Processed_Data_MultiGripperGrasp",
     "resolution": 32,           # 32x32x32 grid
     "padding": 0.1,             # 10% buffer
@@ -34,7 +34,7 @@ def center_and_scale_meshes(root_dir, scale_factor=2):
     for f in tqdm(files, desc="Centering and scaling meshes"):
         try:
             mesh = trimesh.load(str(f), force='mesh')
-            
+            """"
             # Compute bounding box
             bb_min = mesh.vertices.min(axis=0)
             bb_max = mesh.vertices.max(axis=0)
@@ -52,7 +52,7 @@ def center_and_scale_meshes(root_dir, scale_factor=2):
             
             # Scale mesh
             mesh.vertices *= scale_factor
-            
+            """
             # Save centered and scaled mesh in the same folder
             centered_path = f"{f.parent}/model_centered.obj"
             mesh.export(centered_path)
@@ -146,7 +146,8 @@ def main():
     center_and_scale_meshes(input_root)
 
     # Find global scale
-    scale = find_global_scale(input_root, CONFIG["padding"])
+    #scale = find_global_scale(input_root, CONFIG["padding"])
+    scale = 2.5906344993529746
     print(f"Global Scale: {scale}")
 
     # Find all folders that contain model_centered.obj

@@ -71,7 +71,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", required=False, help="Path to .pth file", default= "exps_new/model_final.pth")
     parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default=".\Data\Testset\Processed_Data_MultiGripperGrasp")
-    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default=".C:\Data\Testset\MultiGrippperGrasp")
+    parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default=".\Data\Testset\MultiGripperGrasp")
     parser.add_argument("--urdf_path", default="./Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
     parser.add_argument("--num_grasps", type=int, default=3, help="How many to generate")
     args = parser.parse_args()
@@ -104,6 +104,9 @@ def main():
         scheduler = NoiseScheduler(num_timesteps=1000, device=device)
 
         norm_grasps = generate_grasps(model, scheduler, voxel, args.num_grasps)
+        print("Mean predicted grasp position:",
+        norm_grasps[:, :3].mean(axis=0))
+
 
         real_grasps = []
         for g in norm_grasps:
@@ -161,7 +164,7 @@ def main():
 
         # get mesh path
         base_name = npz_path.stem.replace("_generated_grasps", "")
-        obj_path = Path("Data/Testset/MultiGrippperGrasp/GoogleScannedObjects") / base_name / "meshes/model_centered.obj"
+        obj_path = Path("Data/Testset/MultiGripperGrasp/GoogleScannedObjects") / base_name / "meshes/model_centered.obj"
         if not obj_path.exists():
             print(f"Mesh not found: {obj_path}")
 

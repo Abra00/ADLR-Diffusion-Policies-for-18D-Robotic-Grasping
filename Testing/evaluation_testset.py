@@ -21,7 +21,7 @@ def main():
     pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
     #joint information
     COUPLED_JOINTS = [3,9,15,21]
-    ACTIVE_JOINTS =     [1,2,3,7,8,9,13,14,15,19,20,21]
+    ACTIVE_JOINTS =  [1,2,3,7,8,9,13,14,15,19,20,21]
     # Good friction values for grasping
     FRICTION = 1.0       # radnom friction value
     SPIN_F = 0.01         # reduce twisting slip
@@ -76,7 +76,7 @@ def main():
         joints = data["joints"]          
         # get mesh path
         base_name = npz_path.stem.replace("_generated_grasps", "")
-        obj_path = Path("Data/Testset/MultiGrippperGrasp/GoogleScannedObjects") / base_name / "meshes/model_centered.obj"
+        obj_path = Path("Data/Testset/MultiGripperGrasp/GoogleScannedObjects") / base_name / "meshes/model_centered.obj"
         if not obj_path.exists():
             print(f"Mesh not found: {obj_path}")
         if base_name not in results["objects"]:
@@ -195,6 +195,13 @@ def main():
             # ------------------------
             # Move hand to grasp pose (Position-Control)
             # ------------------------
+            for j_idx in ACTIVE_JOINTS:
+                pybullet.setJointMotorControl2(
+                    bodyIndex=hand_id,
+                    jointIndex=j_idx,
+                    controlMode=pybullet.VELOCITY_CONTROL,
+                    force=0  # nullify internal motor
+                )
             q_desired = joint_vals+0.1 #offest to get contact 
             pybullet.changeDynamics(object_id, -1, linearDamping=100, angularDamping=100) #make object hard to move
             # Close hand using torque-control PD loop
@@ -214,18 +221,15 @@ def main():
                     forces=torques
                 )
                 pybullet.stepSimulation()
-                # optional for GUI: time.sleep(1/1000)
+                #time.sleep(1/1000)
     
-            print("Final grasp strenght")
-            y=pybullet.getJointStates(hand_id,ACTIVE_JOINTS)
-            print([j[-1] for j in y])   
+            print("Commanded torques:", torques)
+
             pybullet.changeDynamics(object_id, -1, linearDamping=0.04, angularDamping=0.04) # make object again normal to move 
             # Enable gravity for realistic object behavior
             pybullet.setGravity(0,0,-9.81)
 
             start_pos, _ = pybullet.getBasePositionAndOrientation(object_id)  #only safe starting position not orientation 
-
-    
 
             hold_time = 0.0
 
