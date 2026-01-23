@@ -60,34 +60,6 @@ def center_and_scale_meshes(root_dir, scale_factor=2):
         except Exception as e:
             print(f"Failed to process {f}: {e}")
 
-
-def find_global_scale(root_dir, padding):
-    max_extent = 0.0
-    
-    files = list(Path(root_dir).rglob("model_centered.obj"))
-    print(f"Found {len(files)} files")
-    
-    for f in tqdm(files, desc="Scanning mesh sizes"):
-        try:
-            mesh = trimesh.load(str(f), force='mesh')
-            extent = (mesh.vertices.max(0)-mesh.vertices.min(0)).max()
-            
-            # Safety if object > 2m
-            if extent > 2.0: continue 
-            if extent > max_extent: max_extent = extent
-            pass
-        except:
-            pass
-
-    print(f"Largest object: {max_extent:.4f}m")
-
-    # We want (max_extent * scale) = (1.0 - padding)
-    global_scale = (1.0 - padding)/max_extent
-    print(f"Global Scale Factor calculated: {global_scale:.4f}")
-    print("This scale will be applied to ALL objects.\n")
-    
-    return global_scale
-
 def process_trial(config, global_scale, trial_path):
     """
     GOAL: Load raw mesh/grasps -> Center & Scale -> Voxelize -> Save.
@@ -145,9 +117,7 @@ def main():
     #center meshes and overwrite old meshes 
     center_and_scale_meshes(input_root)
 
-    # Find global scale
-    #scale = find_global_scale(input_root, CONFIG["padding"])
-    scale = 2.5906344993529746
+    scale = 2.5906344993529746 #use same global sclae as during training 
     print(f"Global Scale: {scale}")
 
     # Find all folders that contain model_centered.obj

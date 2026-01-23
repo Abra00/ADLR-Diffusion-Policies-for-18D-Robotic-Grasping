@@ -17,7 +17,7 @@ def main():
     print(f"Visualizing {len(npz_files)} random files (first grasp only).")
     # CONNECT TO PYBULLET
     pybullet.connect(pybullet.GUI) 
-    pybullet.setPhysicsEngineParameter(fixedTimeStep=1.0/1000.0, numSubSteps=4)
+    pybullet.setPhysicsEngineParameter(fixedTimeStep=1.0/500.0, numSubSteps=2)
     pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
     #joint information
     COUPLED_JOINTS = [3,9,15,21]
@@ -60,7 +60,7 @@ def main():
         "objects": {}
     }
     #evaluation values
-    dt = 1 / 1000
+    dt = 1 / 500
     max_time = 4.0
     MIN_VALID_HOLD = 0.065 #65ms (enough time for an object to drop 2 cm)
     #controler values
@@ -221,7 +221,7 @@ def main():
                     forces=torques
                 )
                 pybullet.stepSimulation()
-                #time.sleep(1/1000)
+                #time.sleep(1/500)
     
             print("Commanded torques:", torques)
 
