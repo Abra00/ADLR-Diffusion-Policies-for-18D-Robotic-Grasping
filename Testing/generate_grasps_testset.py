@@ -12,6 +12,7 @@ from pathlib import Path
 from src.model import DiffusionMLP
 from src.noise_scheduler import NoiseScheduler
 import random
+from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"using device: {device}")
@@ -21,8 +22,8 @@ model_config = {
     "hidden_size": 512,
     "hidden_layers": 6, 
     "emb_size": 256, 
-    "input_emb_dim": 64,
-    "scale": 2500
+    "input_emb_dim": 128,
+    "scale": 1000
 }
 
 # Physical Limits (from urdf)
@@ -73,7 +74,7 @@ def main():
     parser.add_argument("--npz_path", required=False, help="Path to processed .npz file", default=".\Data\Testset\Processed_Data_MultiGripperGrasp")
     parser.add_argument("--obj_path", required=False, help="Path to raw .obj mesh", default=".\Data\Testset\MultiGripperGrasp")
     parser.add_argument("--urdf_path", default="./Data/studentGrasping/urdfs/dlr2.urdf", help="Path to robot URDF")
-    parser.add_argument("--num_grasps", type=int, default=3, help="How many to generate")
+    parser.add_argument("--num_grasps", type=int, default=5, help="How many to generate")
     args = parser.parse_args()
 
     print("Loading Model...")
@@ -87,10 +88,10 @@ def main():
 
     PROCESSED_DIR = Path(args.npz_path)  
     npz_files = list(PROCESSED_DIR.glob("*.npz"))
-    npz_files = npz_files[:10] #for testing
+    #npz_files = npz_files[:10] #limit for testing
     print(f"Found {len(npz_files)} processed voxel files")
 
-    for npz_path in npz_files:
+    for npz_path in tqdm(npz_files, desc="Creating Grasps for all Objects"):
         print(f"Processing {npz_path.name} ...")
         data = np.load(npz_path)
         voxel = data["voxel_sdf"]
